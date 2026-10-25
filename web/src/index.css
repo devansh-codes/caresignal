@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens (RGB triplets so Tailwind can apply alpha).
+ * Color carries meaning: red is reserved for "above the penalty cutoff" / worse-than-national only.
+ * Category hues (nursing / shared / other) are never red, amber or green.
+ */
+:root {
+  --bg: 246 248 251;
+  --surface: 255 255 255;
+  --surface-2: 240 244 248;
+  --border: 222 228 236;
+  --ink: 15 27 45;
+  --muted: 84 99 118;
+  --primary: 11 110 138;
+  --primary-ink: 255 255 255;
+  --critical: 190 30 45;
+  --warning: 168 98 0;
+  --ok: 30 122 70;
+  --cat-nursing: 11 110 138;
+  --cat-shared: 108 92 210;
+  --cat-other: 128 140 158;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: 10 16 28;
+    --surface: 17 25 40;
+    --surface-2: 24 34 52;
+    --border: 40 52 72;
+    --ink: 230 237 245;
+    --muted: 150 164 184;
+    --primary: 64 182 212;
+    --primary-ink: 6 20 30;
+    --critical: 255 107 107;
+    --warning: 240 170 70;
+    --ok: 86 200 130;
+    --cat-nursing: 64 182 212;
+    --cat-shared: 160 148 255;
+    --cat-other: 176 158 136;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: 10 16 28;
+  --surface: 17 25 40;
+  --surface-2: 24 34 52;
+  --border: 40 52 72;
+  --ink: 230 237 245;
+  --muted: 150 164 184;
+  --primary: 64 182 212;
+  --primary-ink: 6 20 30;
+  --critical: 255 107 107;
+  --warning: 240 170 70;
+  --ok: 86 200 130;
+  --cat-nursing: 64 182 212;
+  --cat-shared: 160 148 255;
+  --cat-other: 176 158 136;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--ink));
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--primary));
+  outline-offset: 2px;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+}

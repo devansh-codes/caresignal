@@ -1,0 +1,19 @@
+# Transparent peer-group rules (plan §4.4). No clustering: every hospital's group can be derived by hand.
+min_group_size: 15          # counted among hospitals with an official Total HAC Score
+bed_bands:                  # [key, label, min_beds_inclusive, max_beds_inclusive or null]
+  - [b0_99, "<100 beds", 0, 99]
+  - [b100_299, "100–299 beds", 100, 299]
+  - [b300_499, "300–499 beds", 300, 499]
+  - [b500p, "500+ beds", 500, null]
+teaching:                   # resident FTE / beds
+  minor_min_ratio: 0.0      # ratio > 0 and < major_min_ratio
+  major_min_ratio: 0.25
+teaching_labels: {none: Non-teaching, minor: Minor teaching, major: Major teaching}
+location_labels: {urban: Urban, rural: Rural}
+region_labels: {northeast: Northeast, midwest: Midwest, south: South, west: West, territory: U.S. territories}
+census_regions:
+  northeast: [CT, ME, MA, NH, RI, VT, NJ, NY, PA]
+  midwest: [IL, IN, MI, OH, WI, IA, KS, MN, MO, NE, ND, SD]
+  south: [DE, DC, FL, GA, MD, NC, SC, VA, WV, AL, KY, MS, TN, AR, LA, OK, TX]
+  west: [AZ, CO, ID, MT, NV, NM, UT, WY, AK, CA, HI, OR, WA]
+  territory: [PR, GU, VI, AS, MP]

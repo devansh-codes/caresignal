@@ -1,0 +1,423 @@
+# CareSignal source registry. Used by pipeline/fetch.py and pipeline/validate.py.
+# expected_columns come from the real CSV headers (verified 2026-10-24). PDC sources resolve
+# metastore -> distribution[0].downloadURL; datacms sources resolve data.json -> title match -> newest year CSV.
+datasets:
+- id: xubh-q36u
+  source: pdc
+  title: Hospital General Information
+  role: Facility list, type, ownership, state, overall star rating
+  file: xubh-q36u.csv
+  key:
+  - Facility ID
+  ccn_column: Facility ID
+  period_columns: []
+  expected_columns:
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Telephone Number
+  - Hospital Type
+  - Hospital Ownership
+  - Emergency Services
+  - Meets criteria for birthing friendly designation
+  - Hospital overall rating
+  - Hospital overall rating footnote
+  - MORT Group Measure Count
+  - Count of Facility MORT Measures
+  - Count of MORT Measures Better
+  - Count of MORT Measures No Different
+  - Count of MORT Measures Worse
+  - MORT Group Footnote
+  - Safety Group Measure Count
+  - Count of Facility Safety Measures
+  - Count of Safety Measures Better
+  - Count of Safety Measures No Different
+  - Count of Safety Measures Worse
+  - Safety Group Footnote
+  - READM Group Measure Count
+  - Count of Facility READM Measures
+  - Count of READM Measures Better
+  - Count of READM Measures No Different
+  - Count of READM Measures Worse
+  - READM Group Footnote
+  - Pt Exp Group Measure Count
+  - Count of Facility Pt Exp Measures
+  - Pt Exp Group Footnote
+  - TE Group Measure Count
+  - Count of Facility TE Measures
+  - TE Group Footnote
+- id: 77hc-ibv8
+  source: pdc
+  title: Healthcare Associated Infections - Hospital
+  role: SIR, observed, predicted, device days and CIs for HAI_1-HAI_6
+  file: 77hc-ibv8.csv
+  key:
+  - Facility ID
+  - Measure ID
+  ccn_column: Facility ID
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Telephone Number
+  - Measure ID
+  - Measure Name
+  - Compared to National
+  - Score
+  - Footnote
+  - Start Date
+  - End Date
+- id: dgck-syfz
+  source: pdc
+  title: Patient survey (HCAHPS) - Hospital
+  role: Nurse communication, discharge information and HCAHPS star ratings
+  file: dgck-syfz.csv
+  key:
+  - Facility ID
+  - HCAHPS Measure ID
+  ccn_column: Facility ID
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Telephone Number
+  - HCAHPS Measure ID
+  - HCAHPS Question
+  - HCAHPS Answer Description
+  - Patient Survey Star Rating
+  - Patient Survey Star Rating Footnote
+  - HCAHPS Answer Percent
+  - HCAHPS Answer Percent Footnote
+  - HCAHPS Linear Mean Value
+  - Number of Completed Surveys
+  - Number of Completed Surveys Footnote
+  - Survey Response Rate Percent
+  - Survey Response Rate Percent Footnote
+  - Start Date
+  - End Date
+- id: ynj2-r877
+  source: pdc
+  title: Complications and Deaths - Hospital
+  role: PSI 03, PSI 08, PSI 90 and other PSIs (compared to national)
+  file: ynj2-r877.csv
+  key:
+  - Facility ID
+  - Measure ID
+  ccn_column: Facility ID
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Telephone Number
+  - Measure ID
+  - Measure Name
+  - Compared to National
+  - Denominator
+  - Score
+  - Lower Estimate
+  - Higher Estimate
+  - Footnote
+  - Start Date
+  - End Date
+- id: muwa-iene
+  source: pdc
+  title: CMS Medicare PSI-90 and component measures - six-digit estimate dataset
+  role: Precise PSI 90 component values
+  file: muwa-iene.csv
+  key:
+  - Facility ID
+  - Measure ID
+  ccn_column: Facility ID
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Measure ID
+  - Measure Name
+  - Rate
+  - Footnote
+  - Start Date
+  - End Date
+- id: yq43-i98g
+  source: pdc
+  title: Hospital-Acquired Condition (HAC) Reduction Program
+  role: FY2026 official HAC measure values, Winsorized z-scores, Total HAC Score, payment reduction (ground truth)
+  file: yq43-i98g.csv
+  key:
+  - Facility ID
+  ccn_column: Facility ID
+  period_columns:
+  - PSI 90 Start Date
+  - PSI 90 End Date
+  - HAI Measures Start Date
+  - HAI Measures End Date
+  expected_columns:
+  - Facility Name
+  - Facility ID
+  - State
+  - Fiscal Year
+  - PSI 90 Composite Value
+  - PSI 90 Composite Value Footnote
+  - PSI 90 W Z Score
+  - PSI 90 W Z Footnote
+  - PSI 90 Start Date
+  - PSI 90 End Date
+  - CLABSI SIR
+  - CLABSI SIR Footnote
+  - CLABSI W Z Score
+  - CLABSI W Z Footnote
+  - CAUTI SIR
+  - CAUTI SIR Footnote
+  - CAUTI W Z Score
+  - CAUTI W Z Footnote
+  - SSI SIR
+  - SSI SIR Footnote
+  - SSI W Z Score
+  - SSI W Z Footnote
+  - CDI SIR
+  - CDI SIR Footnote
+  - CDI W Z Score
+  - CDI W Z Footnote
+  - MRSA SIR
+  - MRSA SIR Footnote
+  - MRSA W Z Score
+  - MRSA W Z Footnote
+  - HAI Measures Start Date
+  - HAI Measures End Date
+  - Total HAC Score
+  - Total HAC Score Footnote
+  - Payment Reduction
+  - Payment Reduction Footnote
+- id: 9n3s-kdb3
+  source: pdc
+  title: Hospital Readmissions Reduction Program
+  role: Excess readmission ratios by condition
+  file: 9n3s-kdb3.csv
+  key:
+  - Facility ID
+  - Measure Name
+  ccn_column: Facility ID
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - Facility Name
+  - Facility ID
+  - State
+  - Measure Name
+  - Number of Discharges
+  - Footnote
+  - Excess Readmission Ratio
+  - Predicted Readmission Rate
+  - Expected Readmission Rate
+  - Number of Readmissions
+  - Start Date
+  - End Date
+- id: ypbt-wvdk
+  source: pdc
+  title: Hospital Value-Based Purchasing (HVBP) - Total Performance Score
+  role: VBP domain scores and Total Performance Score
+  file: ypbt-wvdk.csv
+  key:
+  - Facility ID
+  ccn_column: Facility ID
+  period_columns: []
+  expected_columns:
+  - Fiscal Year
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Unweighted Normalized Clinical Outcomes Domain Score
+  - Weighted Normalized Clinical Outcomes Domain Score
+  - Unweighted Person And Community Engagement Domain Score
+  - Weighted Person And Community Engagement Domain Score
+  - Unweighted Normalized Safety Domain Score
+  - Weighted Safety Domain Score
+  - Unweighted Normalized Efficiency And Cost Reduction Domain Score
+  - Weighted Efficiency And Cost Reduction Domain Score
+  - Total Performance Score
+- id: 632h-zaca
+  source: pdc
+  title: Unplanned Hospital Visits - Hospital
+  role: Readmission and return-visit measures
+  file: 632h-zaca.csv
+  key:
+  - Facility ID
+  - Measure ID
+  ccn_column: Facility ID
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Telephone Number
+  - Measure ID
+  - Measure Name
+  - Compared to National
+  - Denominator
+  - Score
+  - Lower Estimate
+  - Higher Estimate
+  - Number of Patients
+  - Number of Patients Returned
+  - Footnote
+  - Start Date
+  - End Date
+- id: yv7e-xc69
+  source: pdc
+  title: Timely and Effective Care - Hospital
+  role: SEP-1 sepsis bundle and other process measures
+  file: yv7e-xc69.csv
+  key:
+  - Facility ID
+  - Measure ID
+  ccn_column: Facility ID
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - Facility ID
+  - Facility Name
+  - Address
+  - City/Town
+  - State
+  - ZIP Code
+  - County/Parish
+  - Telephone Number
+  - Condition
+  - Measure ID
+  - Measure Name
+  - Score
+  - Sample
+  - Footnote
+  - Start Date
+  - End Date
+- id: 99ue-w85f
+  source: pdc
+  title: Patient survey (HCAHPS) - National
+  role: National HCAHPS benchmarks
+  file: 99ue-w85f.csv
+  key:
+  - HCAHPS Measure ID
+  ccn_column: null
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - HCAHPS Measure ID
+  - HCAHPS Question
+  - HCAHPS Answer Description
+  - HCAHPS Answer Percent
+  - Footnote
+  - Start Date
+  - End Date
+- id: 84jm-wiui
+  source: pdc
+  title: Patient survey (HCAHPS) - State
+  role: State HCAHPS benchmarks
+  file: 84jm-wiui.csv
+  key:
+  - State
+  - HCAHPS Measure ID
+  ccn_column: null
+  period_columns:
+  - Start Date
+  - End Date
+  expected_columns:
+  - State
+  - HCAHPS Measure ID
+  - HCAHPS Question
+  - HCAHPS Answer Description
+  - HCAHPS Answer Percent
+  - Footnote
+  - Start Date
+  - End Date
+- id: cost_report
+  source: datacms
+  title: Hospital Provider Cost Report
+  title_match: Hospital Provider Cost Report
+  role: Bed count, intern/resident FTEs (teaching), urban/rural for peer groups
+  file: cost_report.csv
+  key:
+  - Provider CCN
+  ccn_column: Provider CCN
+  period_columns:
+  - Fiscal Year Begin Date
+  - Fiscal Year End Date
+  coverage_rule:
+    min_ratio_vs_prior: 0.9
+  expected_columns:
+  - rpt_rec_num
+  - Provider CCN
+  - Hospital Name
+  - City
+  - State Code
+  - Rural Versus Urban
+  - CCN Facility Type
+  - Provider Type
+  - Type of Control
+  - Fiscal Year Begin Date
+  - Fiscal Year End Date
+  - Number of Interns and Residents (FTE)
+  - Number of Beds
+  - Total Discharges (V + XVIII + XIX + Unknown)
+- id: medicare_inpatient
+  source: datacms
+  title: Medicare Inpatient Hospitals - by Provider
+  title_match: Medicare Inpatient Hospitals - by Provider
+  role: Total Medicare inpatient payments per hospital (1% HAC exposure estimate)
+  file: medicare_inpatient.csv
+  key:
+  - Rndrng_Prvdr_CCN
+  ccn_column: Rndrng_Prvdr_CCN
+  period_columns: []
+  expected_columns:
+  - Rndrng_Prvdr_CCN
+  - Rndrng_Prvdr_Org_Name
+  - Rndrng_Prvdr_State_Abrvtn
+  - Tot_Benes
+  - Tot_Pymt_Amt
+  - Tot_Mdcr_Pymt_Amt
+  - Tot_Dschrgs

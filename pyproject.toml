@@ -1,0 +1,21 @@
+[project]
+name = "caresignal"
+version = "1.0.0"
+description = "Nursing-sensitive quality & CMS penalty radar built on public CMS data"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["web", ".venv", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+  "data: needs pipeline outputs in data/processed or data/raw (run `make data` first); excluded on PR CI via -m 'not data'",
+]

@@ -1,0 +1,115 @@
+name: Pipeline & Deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 9 * * 1" # Mondays 09:17 UTC — picks up CMS refreshes
+  workflow_dispatch:
+
+permissions:
+  contents: write # commit snapshot manifests
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PY: python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - name: Compute ISO week for the raw-data cache key
+        id: week
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      # Raw CMS files are cached per ISO week; fetch --if-changed only re-downloads
+      # datasets whose CMS 'modified' date moved since the cached manifest.
+      - name: Restore raw CMS data cache
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: cms-raw-${{ steps.week.outputs.week }}
+          restore-keys: |
+            cms-raw-
+
+      - name: Run data pipeline (fetch → validate → transform → HAC rebuild → metrics → export)
+        run: make data PY=python
+
+      # Fail closed: methodology + data-contract tests gate the deploy.
+      # If anything fails, no artifact is uploaded and the previous site stays live.
+      - name: Python tests (methodology + data contracts)
+        run: python -m pytest -q
+
+      # Optional: recalculate the Excel workbook in LibreOffice and compare with the Python outputs.
+      # Visible in the logs, but never blocks the deploy.
+      - name: Excel recalculation check (LibreOffice, non-blocking)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libreoffice-calc
+          python scripts/recalc_check.py
+
+      - name: Commit snapshot manifest
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "caresignal-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/snapshots README.md
+          if git diff --cached --quiet; then
+            echo "No snapshot changes."
+          else
+            git commit -m "data: snapshot $(date -u +%F) [skip ci]"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Web unit tests (simulate.ts mirrors Python math)
+        working-directory: web
+        run: npx vitest run --passWithNoTests
+
+      - name: Build site
+        working-directory: web
+        run: npm run build
+
+      - name: Size guard (fail if site > 200 MB)
+        run: bash scripts/size_guard.sh web/dist 200
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
