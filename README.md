@@ -55,7 +55,7 @@ There are no servers, API keys or runtime costs. Every number on the site traces
 ## Key national findings
 
 <!-- FINDINGS:START -->
-_Computed by the pipeline from public CMS files (build 2026-10-25). Each finding lists the source dataset and its reporting period._
+_Computed by the pipeline from public CMS files (build 2026-10-26). Each finding lists the source dataset and its reporting period._
 
 - **2,917** of 5,419 facilities have a FY2026 Total HAC Score; cutoff = **0.37955** (`yq43-i98g`).
 - **Hospitals receiving the FY2026 HAC payment reduction: 719 (23.9%).** 719 of 3,012 hospitals with a payment determination are flagged for the 1% reduction; 718 of them have a published Total HAC Score (CCN 440218 is flagged without a published score); 2 scored, flagged hospitals are absent from Hospital General Information, so CareSignal profiles 716 penalized hospitals. 43 Maryland hospitals are scored but waived. Cutoff: Total HAC Score above 0.37955.  
