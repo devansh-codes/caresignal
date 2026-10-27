@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,6 +31,8 @@ from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.formula import ArrayFormula
 from openpyxl.worksheet.table import Table, TableStyleInfo
+
+from pipeline.plain_text import plain
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
@@ -48,8 +51,8 @@ MEASURE_LABEL = {
 }
 MEASURE_CATEGORY = {
     "psi90": "Shared",
-    "clabsi": "Nursing-driven",
-    "cauti": "Nursing-driven",
+    "clabsi": "Nursing driven",
+    "cauti": "Nursing driven",
     "ssi": "Other",
     "cdi": "Shared",
     "mrsa": "Shared",
@@ -1270,9 +1273,35 @@ def build(inp: Inputs | None = None, out: Path = OUT) -> Path:
     b.wb._sheets = [b.wb[n] for n in order]
     b.wb.active = 1
     b.wb.calculation.fullCalcOnLoad = True  # no cached values: force Excel/LibreOffice to compute on open
+    plain_text_pass(b.wb)
     out.parent.mkdir(parents=True, exist_ok=True)
     b.wb.save(out)
     return out
+
+
+_QUOTED = re.compile(r'"((?:[^"]|"")*)"')
+
+
+def _plain_formula(f: str) -> str:
+    """Rewrite only the quoted text inside a formula; operators (including minus) stay as they are."""
+    return _QUOTED.sub(lambda m: '"' + plain(m.group(1).replace('""', '"')).replace('"', '""') + '"', f)
+
+
+def plain_text_pass(wb: Workbook) -> None:
+    """Remove dashes from every visible text cell, formula text literal and validation message
+    (docs/STYLE_GUIDE.md). Applied to cell values and lookup labels alike, so lookups still match."""
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                v = c.value
+                if isinstance(v, ArrayFormula):
+                    v.text = _plain_formula(v.text)
+                elif isinstance(v, str):
+                    c.value = _plain_formula(v) if v.startswith("=") else plain(v)
+        for dv in ws.data_validations.dataValidation:
+            for attr in ("error", "errorTitle", "prompt", "promptTitle"):
+                if getattr(dv, attr, None):
+                    setattr(dv, attr, plain(getattr(dv, attr)))
 
 
 def main() -> None:

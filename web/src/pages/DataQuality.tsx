@@ -1,22 +1,21 @@
 import { useMemo, useState } from 'react'
-import { Card, KpiTile, PageHeader, SourceNote, StateView } from '../components/ui'
+import { StateView } from '../components/ui'
 import { SortableTable, type Column } from '../components/insights/SortableTable'
 import { LIMITATIONS, datasetUrl } from '../components/insights/content'
+import { ArrowLink, BigStat, PageIntro, Panel, ShowMath, Source, StatRow } from '../components/insights/layout'
 import { loadAccuracy, loadDq, loadManifest, useData } from '../lib/data'
-import { HAC_LABELS, fmt, fmtDate, fmtInt, fmtPct, fmtPeriod } from '../lib/format'
+import { HAC_LABELS, NA, fmt, fmtDate, fmtInt, fmtPct, fmtPeriod } from '../lib/format'
 import type { Accuracy, DqRule, HacMeasureKey, Manifest, SourceEntry } from '../lib/types'
 
 const MEASURES: HacMeasureKey[] = ['psi90', 'clabsi', 'cauti', 'ssi', 'cdi', 'mrsa']
 const STALE_MONTHS = 13
 
-/** Optional fields the rebuild may add beyond the base contract (calibrated parameters, tolerance, conventions). */
+/** Optional fields the rebuild adds beyond the base contract (calibrated parameters, tolerance, counts). */
 type AccuracyExt = Accuracy & {
   tolerance?: { z: number; total: number }
   z_within_tol_calibrated?: Record<HacMeasureKey, number>
-  max_abs_z_diff_calibrated?: Record<HacMeasureKey, number>
   total_within_tol_calibrated?: number
   flag_agreement_calibrated?: number
-  max_abs_total_diff?: number
   counts?: { penalized_official?: number; not_penalized_official?: number; maryland?: number; flag_evaluated?: number }
   built_at?: string
 }
@@ -30,71 +29,88 @@ export default function DataQuality() {
   const man = useData(loadManifest)
   const acc = useData(loadAccuracy)
   const dq = useData(loadDq)
+  const latest = man.status === 'ready'
+    ? man.data.sources.map((s) => s.modified).filter((d): d is string => !!d).sort().slice(-1)[0] ?? null
+    : null
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Trust & transparency"
-        title="Data quality"
-        description="Every source file, its freshness, every validation rule the pipeline enforces, and how closely the rebuilt HAC scores match CMS's official values. A build that fails an error-level rule or the rebuild tolerance is not deployed, and the previous site stays live."
+    <div className="space-y-8">
+      <PageIntro
+        eyebrow="About the data"
+        title="Where the numbers come from and how we check them"
+        lead="Every number on CareSignal comes from public files published by the Centers for Medicare and Medicaid Services (CMS). The site checks for new files every week."
+        tells={<>
+          Whether you can trust the numbers (our rebuilt scores against the official CMS results), how recent each data file is, and the automatic
+          checks every update must pass. If a check fails, the update is not published and the previous version stays online.
+          {latest && <> The newest CMS file was published on <strong className="text-ink">{fmtDate(latest)}</strong>.</>}
+        </>}
       />
+
       {acc.status === 'loading' && <StateView kind="loading" />}
-      {acc.status === 'error' && <StateView kind="error" message={`HAC rebuild accuracy could not be loaded (${acc.error}).`} />}
+      {acc.status === 'error' && <StateView kind="error" message={`The accuracy check could not be loaded (${acc.error}).`} />}
       {acc.status === 'ready' && <AccuracySection a={acc.data as AccuracyExt} />}
 
-      <Card title="Source manifest" subtitle={`Each CMS file as fetched by this build. Sources last modified more than ${STALE_MONTHS} months before the build are flagged as stale.`}>
+      <Panel eyebrow="How fresh is the data" title="The CMS files we use"
+        intro={<>Each row is one public CMS file. Medicare data always runs behind real life, so the period of care is often a year or two old. Files that CMS has not updated in more than {STALE_MONTHS} months are marked <strong className="text-warning">Older</strong>.</>}>
         {man.status === 'loading' && <StateView kind="loading" />}
-        {man.status === 'error' && <StateView kind="error" message={`The source manifest could not be loaded (${man.error}).`} />}
+        {man.status === 'error' && <StateView kind="error" message={`The file list could not be loaded (${man.error}).`} />}
         {man.status === 'ready' && <ManifestTable m={man.data} />}
-      </Card>
+      </Panel>
 
-      <Card title="Validation rules" subtitle="Schema, CCN format, footnote and missing-value handling, ranges and duplicates, checked on every build.">
+      <Panel eyebrow="Automatic checks" title="Every update must pass these checks"
+        intro="Before anything is published, a program checks each file: are the expected columns there, are hospital IDs valid, are percentages between 0 and 100, are there duplicates, and so on.">
         {dq.status === 'loading' && <StateView kind="loading" />}
-        {dq.status === 'error' && <StateView kind="error" message={`The validation log could not be loaded (${dq.error}).`} />}
-        {dq.status === 'ready' && <RulesTable rules={dq.data.rules} builtAt={dq.data.built_at} />}
-      </Card>
+        {dq.status === 'error' && <StateView kind="error" message={`The check results could not be loaded (${dq.error}).`} />}
+        {dq.status === 'ready' && <RulesTable rules={dq.data.rules} builtAt={dq.data.built_at}
+          names={man.status === 'ready' ? Object.fromEntries(man.data.sources.map((x) => [x.id, x.title])) : {}} />}
+      </Panel>
 
-      <Card title="Known limitations" subtitle="Stated openly so the numbers are read in context.">
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <Panel eyebrow="Limits" title="What this tool cannot tell you" intro="Read the numbers with these limits in mind.">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {LIMITATIONS.map((l) => (
-            <li key={l.title} className="rounded-md border border-border bg-surface-2/40 p-3">
-              <p className="text-sm font-semibold">{l.title}</p>
-              <p className="mt-0.5 text-sm text-muted">{l.body}</p>
+            <li key={l.title} className="bg-surface-2 p-4">
+              <p className="font-bold text-ink">{l.title}</p>
+              <p className="mt-1 text-sm text-muted">{l.body}</p>
             </li>
           ))}
         </ul>
-      </Card>
+        <div className="mt-5"><ArrowLink to="/methods">How we calculate every number</ArrowLink></div>
+      </Panel>
     </div>
   )
 }
 
 function AccuracySection({ a }: { a: AccuracyExt }) {
   const tol = a.tolerance?.z ?? 0.001
-  const flagTone = a.flag_agreement >= 0.99 ? 'ok' : 'warning'
-  const src = `Rebuild of CMS HAC Reduction Program FY${a.fiscal_year} (${a.source}) vs. its official values${a.built_at ? ` · built ${fmtDate(a.built_at.slice(0, 10))}` : ''}`
   const [showAll, setShowAll] = useState(false)
   const mism = showAll ? a.mismatches : a.mismatches.slice(0, 10)
+  const flagN = a.counts?.flag_evaluated ?? a.n_scored
+  const matched = Math.round(a.flag_agreement * flagN)
   return (
-    <Card title="HAC rebuild accuracy"
-      subtitle={`The CMS methodology is recalculated from published measure values and compared hospital by hospital with the official z-scores, totals and payment-reduction flags. Target: ≥99% flag agreement and z-scores within ±${tol}.`}>
-      <div className="grid grid-cols-1 grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiTile label="Penalty-flag agreement" tone={flagTone} value={fmtPct(a.flag_agreement * 100, 1)}
-          context={a.counts?.flag_evaluated ? `${fmtInt(a.counts.flag_evaluated)} hospitals with an official flag` : `${fmtInt(a.n_scored)} scored hospitals`} />
-        <KpiTile label="Total score within tolerance" value={fmtPct(a.total_within_tol * 100, 1)}
-          context={a.total_within_tol_calibrated != null ? `${fmtPct(a.total_within_tol_calibrated * 100, 1)} with calibrated parameters` : `±${tol} of official`} />
-        <KpiTile label="Cutoff (75th pct)" value={fmt(a.cutoff_rebuilt, 4)}
-          context={`Rebuilt · official inferred ${fmt(a.cutoff_official_inferred, 4)}`}
-          info="CMS does not publish the cutoff. It is inferred from the official payment-reduction flags as the midpoint between the highest unpenalized and the lowest penalized Total HAC Score." />
-        <KpiTile label="Hospitals in file" value={fmtInt(a.n_hospitals)} context={`${fmtInt(a.n_scored)} with a Total HAC Score`} />
-      </div>
+    <Panel eyebrow="Can you trust these numbers" title={`Our rebuild matches CMS penalty decisions for ${fmtPct(a.flag_agreement * 100, 1)} of hospitals`}
+      intro={<>CMS publishes the scores but not every step behind them. We rebuilt the FY{a.fiscal_year} safety score from the published inputs and compared it, hospital by hospital, with the official results.</>}>
+      <StatRow>
+        <BigStat above="Penalty decisions that match" tone={a.flag_agreement >= 0.99 ? 'ok' : 'warning'} value={fmtPct(a.flag_agreement * 100, 1)}
+          below={`${fmtInt(matched)} of ${fmtInt(flagN)} hospitals`} />
+        <BigStat above="Match using CMS's own settings" value={a.flag_agreement_calibrated != null ? fmtPct(a.flag_agreement_calibrated * 100, 0) : NA}
+          below="Every score and decision matches when we use the exact averages CMS used" />
+        <BigStat above="Penalty line" value={fmt(a.cutoff_official_inferred, 2)}
+          below={`Worked out from the CMS decisions. Our own calculation gives ${fmt(a.cutoff_rebuilt, 2)}.`} />
+        <BigStat above="Hospitals checked" value={fmtInt(a.n_hospitals)} below={`${fmtInt(a.n_scored)} of them have a safety score`} />
+      </StatRow>
 
-      <h3 className="mt-6 text-sm font-semibold">Per-measure z-score agreement</h3>
-      <div className="mt-2 overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-max text-sm">
-          <caption className="sr-only">Share of hospitals whose rebuilt z-score is within tolerance of the official value, by measure</caption>
+      <h3 className="mt-8 font-bold text-ink">How closely each measure matches</h3>
+      <p className="mt-1 text-sm text-muted">
+        The share of hospitals where our result for each measure is within {tol} of the CMS value. Two measures fall short because CMS rounds the numbers it
+        publishes, while its own calculation used the unrounded values.
+      </p>
+      <div className="mt-3 overflow-x-auto border border-border">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Share of hospitals whose rebuilt measure result matches CMS, by measure</caption>
           <thead className="bg-surface-2">
             <tr>
-              {['Measure', `Within ±${tol}`, 'Max |Δz|', ...(a.z_within_tol_calibrated ? [`Within ±${tol} (calibrated)`, 'Max |Δz| (calibrated)'] : [])].map((h, i) => (
-                <th key={h} scope="col" className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted ${i ? 'text-right' : 'text-left'}`}>{h}</th>
+              {['Measure', 'Our rebuild', ...(a.z_within_tol_calibrated ? ["With CMS's settings"] : [])].map((h, i) => (
+                <th key={h} scope="col" className={`px-3 py-2 text-xs font-bold uppercase tracking-wide text-ink ${i ? 'text-right' : 'text-left'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -102,19 +118,17 @@ function AccuracySection({ a }: { a: AccuracyExt }) {
             {MEASURES.map((m) => {
               const share = a.z_within_tol[m]
               return (
-                <tr key={m} className="border-t border-border/60">
-                  <th scope="row" className="px-3 py-2 text-left font-medium">{HAC_LABELS[m]}</th>
-                  <td className="tabular px-3 py-2 text-right">
+                <tr key={m} className="border-t border-border/60 text-ink">
+                  <th scope="row" className="px-3 py-2.5 text-left font-semibold">{HAC_LABELS[m]}</th>
+                  <td className="tabular px-3 py-2.5 text-right">
                     <span className="inline-flex items-center justify-end gap-2">
-                      <span aria-hidden className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-surface-2 sm:inline-block">
-                        <span className={`block h-full rounded-full ${share >= 0.99 ? 'bg-ok' : 'bg-warning'}`} style={{ width: `${(share ?? 0) * 100}%` }} />
+                      <span aria-hidden className="hidden h-2 w-24 overflow-hidden bg-surface-2 md:inline-block">
+                        <span className={`block h-full ${share >= 0.99 ? 'bg-ok' : 'bg-warning'}`} style={{ width: `${(share ?? 0) * 100}%` }} />
                       </span>
-                      {share == null ? '—' : fmtPct(share * 100, 1)}
+                      {share == null ? NA : fmtPct(share * 100, 1)}
                     </span>
                   </td>
-                  <td className="tabular px-3 py-2 text-right">{fmt(a.max_abs_z_diff[m], 6)}</td>
-                  {a.z_within_tol_calibrated && <td className="tabular px-3 py-2 text-right">{fmtPct((a.z_within_tol_calibrated[m] ?? 0) * 100, 1)}</td>}
-                  {a.max_abs_z_diff_calibrated && <td className="tabular px-3 py-2 text-right">{fmt(a.max_abs_z_diff_calibrated[m], 6)}</td>}
+                  {a.z_within_tol_calibrated && <td className="tabular px-3 py-2.5 text-right">{fmtPct((a.z_within_tol_calibrated[m] ?? 0) * 100, 0)}</td>}
                 </tr>
               )
             })}
@@ -122,99 +136,104 @@ function AccuracySection({ a }: { a: AccuracyExt }) {
         </table>
       </div>
 
-      {a.notes.length > 0 && (
-        <div className="mt-5">
-          <h3 className="text-sm font-semibold">Method notes</h3>
-          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted">
-            {a.notes.map((n, i) => <li key={i}>{n}</li>)}
-          </ul>
-        </div>
-      )}
-
-      <div className="mt-5">
-        <h3 className="text-sm font-semibold">Disagreements with the official file ({fmtInt(a.mismatches.length)}{a.mismatches.length >= 50 ? ', first 50 listed' : ''})</h3>
+      <ShowMath label="Show technical details">
+        {a.notes.length > 0 && (
+          <>
+            <h4 className="mt-4 text-sm font-bold text-ink">Method notes</h4>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted">
+              {a.notes.map((n, i) => <li key={i}>{n}</li>)}
+            </ul>
+          </>
+        )}
+        <h4 className="mt-5 text-sm font-bold text-ink">
+          Values that differ from the official file ({fmtInt(a.mismatches.length)}{a.mismatches.length >= 50 ? ', first 50 listed' : ''})
+        </h4>
         {a.mismatches.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">None. Every rebuilt value matches the official file within tolerance.</p>
+          <p className="mt-2 text-sm text-muted">None. Every rebuilt value matches the official file.</p>
         ) : (
           <>
-            <div className="mt-2 overflow-x-auto rounded-md border border-border">
+            <div className="mt-2 overflow-x-auto border border-border">
               <table className="w-full min-w-max text-sm">
                 <caption className="sr-only">Hospitals where the rebuilt value differs from the official value</caption>
                 <thead className="bg-surface-2">
-                  <tr>{['CCN', 'Hospital', 'Field', 'Official', 'Rebuilt'].map((h, i) => (
-                    <th key={h} scope="col" className={`px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted ${i >= 3 ? 'text-right' : 'text-left'}`}>{h}</th>
+                  <tr>{['Hospital ID', 'Hospital', 'Value', 'CMS', 'Ours'].map((h, i) => (
+                    <th key={h} scope="col" className={`px-3 py-2 text-xs font-bold uppercase tracking-wide text-ink ${i >= 3 ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody>
                   {mism.map((r, i) => (
-                    <tr key={`${r.ccn}-${r.field}-${i}`} className="border-t border-border/60">
+                    <tr key={`${r.ccn}${r.field}${i}`} className="border-t border-border/60 text-ink">
                       <td className="px-3 py-1.5 font-mono text-xs">{r.ccn}</td>
                       <td className="px-3 py-1.5">{r.name}</td>
                       <td className="px-3 py-1.5 font-mono text-xs">{r.field}</td>
-                      <td className="tabular px-3 py-1.5 text-right">{typeof r.official === 'number' ? fmt(r.official, 4) : r.official ?? '—'}</td>
-                      <td className="tabular px-3 py-1.5 text-right">{typeof r.rebuilt === 'number' ? fmt(r.rebuilt, 4) : r.rebuilt ?? '—'}</td>
+                      <td className="tabular px-3 py-1.5 text-right">{typeof r.official === 'number' ? fmt(r.official, 4) : r.official ?? NA}</td>
+                      <td className="tabular px-3 py-1.5 text-right">{typeof r.rebuilt === 'number' ? fmt(r.rebuilt, 4) : r.rebuilt ?? NA}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             {a.mismatches.length > 10 && (
-              <button type="button" onClick={() => setShowAll((v) => !v)} className="no-print mt-2 text-sm font-medium text-primary hover:underline">
+              <button type="button" onClick={() => setShowAll((v) => !v)} className="no-print mt-2 text-sm font-bold text-ink underline">
                 {showAll ? 'Show fewer' : `Show all ${a.mismatches.length}`}
               </button>
             )}
           </>
         )}
-      </div>
-      <SourceNote>{src}</SourceNote>
-    </Card>
+      </ShowMath>
+      <Source>Our rebuild of the CMS Hospital Acquired Condition Reduction Program, FY{a.fiscal_year}, compared with the official CMS file{a.built_at ? `, checked ${fmtDate(a.built_at.slice(0, 10))}` : ''}</Source>
+    </Panel>
   )
 }
 
 function ManifestTable({ m }: { m: Manifest }) {
   const cols: Column<SourceEntry>[] = [
     {
-      key: 'title', header: 'Dataset', sortValue: (s) => s.title,
+      key: 'title', header: 'CMS file', sortValue: (s) => s.title,
       render: (s) => (
-        <div className="max-w-xs whitespace-normal">
-          <a className="font-medium text-primary hover:underline" href={datasetUrl(s.id, s.download_url)} target="_blank" rel="noreferrer">{s.title}</a>
-          <div className="font-mono text-[11px] text-muted">{s.id}</div>
-        </div>
+        <a className="block max-w-xs whitespace-normal font-bold text-ink underline decoration-[rgb(var(--yellow,254_202_113))] decoration-2 underline-offset-4 hover:opacity-80"
+          href={datasetUrl(s.id, s.download_url)} target="_blank" rel="noreferrer">{s.title}</a>
       ),
     },
-    { key: 'role', header: 'Used for', render: (s) => <span className="block max-w-[15rem] whitespace-normal text-muted">{s.role}</span> },
+    { key: 'role', header: 'What we use it for', render: (s) => <span className="block max-w-[16rem] whitespace-normal text-muted">{s.role}</span> },
     {
-      key: 'modified', header: 'CMS modified', sortValue: (s) => s.modified,
+      key: 'modified', header: 'CMS last updated', sortValue: (s) => s.modified,
       render: (s) => {
         const stale = s.modified && monthsBetween(s.modified, m.built_at) > STALE_MONTHS
         return (
-          <span className={stale ? 'font-medium text-warning' : ''}>
-            {fmtDate(s.modified)}{stale && <span className="ml-1.5 rounded bg-warning/10 px-1.5 py-0.5 text-[11px] font-semibold ring-1 ring-inset ring-warning/30">Stale</span>}
+          <span className={stale ? 'font-semibold text-warning' : 'text-ink'}>
+            {fmtDate(s.modified)}{stale && <span className="ml-2 bg-warning/10 px-1.5 py-0.5 text-[11px] font-bold uppercase">Older</span>}
           </span>
         )
       },
     },
-    { key: 'period', header: 'Reporting period', render: (s) => <span className="whitespace-nowrap">{fmtPeriod(s.period)}</span> },
+    { key: 'period', header: 'Period of care', render: (s) => <span className="whitespace-nowrap text-ink">{s.period ? fmtPeriod(s.period) : 'Not dated'}</span> },
     { key: 'rows', header: 'Rows', align: 'right', sortValue: (s) => s.rows, render: (s) => fmtInt(s.rows) },
     {
-      key: 'http', header: 'HTTP', align: 'right', sortValue: (s) => s.http_status,
-      render: (s) => <span className={s.http_status === 200 ? 'text-ok' : 'font-semibold text-warning'}>{s.http_status}</span>,
+      key: 'http', header: 'Download', align: 'right', sortValue: (s) => s.http_status,
+      render: (s) => s.http_status === 200
+        ? <span className="font-semibold text-ok">OK</span>
+        : <span className="font-semibold text-warning">Problem ({s.http_status})</span>,
     },
-    { key: 'sha', header: 'SHA-256', render: (s) => <span className="font-mono text-[11px] text-muted" title={s.sha256}>{s.sha256.slice(0, 12)}…</span> },
   ]
   return (
     <>
-      <SortableTable caption="Source manifest" rows={m.sources} columns={cols} rowKey={(s) => s.id} initialSort="title" initialDir="asc" maxHeight={640} />
-      <SourceNote>Build manifest generated {fmtDate(m.built_at.slice(0, 10))}{m.git_sha ? ` · commit ${m.git_sha.slice(0, 7)}` : ''}</SourceNote>
+      <SortableTable caption="CMS files used" rows={m.sources} columns={cols} rowKey={(s) => s.id} initialSort="title" initialDir="asc" maxHeight={640} />
+      <Source>Downloaded on {fmtDate(m.built_at.slice(0, 10))}. Each file's digital fingerprint is recorded in data/manifest.json so any change can be traced.</Source>
     </>
   )
 }
 
-function RulesTable({ rules, builtAt }: { rules: DqRule[]; builtAt: string }) {
+const SEV_LABEL = { error: 'Must pass', warn: 'Warning', info: 'For information' } as const
+
+function RulesTable({ rules, builtAt, names }: { rules: DqRule[]; builtAt: string; names: Record<string, string> }) {
+  const nameOf = (id: string) => names[id] ?? (id === 'all' || id === '*' ? 'All files' : id.replace(/[_-]/g, ' '))
   const [dataset, setDataset] = useState('all')
   const [severity, setSeverity] = useState('all')
   const [status, setStatus] = useState('all')
-  const datasets = useMemo(() => Array.from(new Set(rules.map((r) => r.dataset))).sort(), [rules])
+  const datasets = useMemo(() => Array.from(new Set(rules.map((r) => r.dataset))).sort((a, b) => nameOf(a).localeCompare(nameOf(b))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rules, names])
   const filtered = rules.filter((r) =>
     (dataset === 'all' || r.dataset === dataset) &&
     (severity === 'all' || r.severity === severity) &&
@@ -224,44 +243,46 @@ function RulesTable({ rules, builtAt }: { rules: DqRule[]; builtAt: string }) {
   const passed = rules.filter((r) => r.passed).length
   const records = rules.reduce((s, r) => s + r.checked, 0)
 
-  const sevCls = { error: 'text-ink', warn: 'text-warning', info: 'text-muted' } as const
   const cols: Column<DqRule>[] = [
     {
       key: 'status', header: 'Result', sortValue: (r) => (r.passed ? 1 : 0),
       render: (r) => r.passed
-        ? <span className="inline-flex items-center gap-1 text-ok"><span aria-hidden>✓</span>Pass</span>
-        : <span className={`inline-flex items-center gap-1 font-semibold ${r.severity === 'error' ? 'text-critical' : 'text-warning'}`}><span aria-hidden>!</span>{r.severity === 'error' ? 'Fail' : 'Flagged'}</span>,
+        ? <span className="inline-flex items-center gap-1 font-semibold text-ok"><span aria-hidden>✓</span>Passed</span>
+        : <span className={`inline-flex items-center gap-1 font-bold ${r.severity === 'error' ? 'text-critical' : 'text-warning'}`}><span aria-hidden>!</span>{r.severity === 'error' ? 'Failed' : 'Flagged'}</span>,
     },
-    { key: 'dataset', header: 'Dataset', sortValue: (r) => r.dataset, render: (r) => <span className="font-mono text-xs">{r.dataset}</span> },
-    { key: 'description', header: 'Rule', sortValue: (r) => r.description, render: (r) => <span className="block max-w-md whitespace-normal">{r.description}</span> },
-    { key: 'severity', header: 'Severity', sortValue: (r) => r.severity, render: (r) => <span className={`text-xs font-semibold uppercase ${sevCls[r.severity]}`}>{r.severity}</span> },
-    { key: 'checked', header: 'Checked', align: 'right', sortValue: (r) => r.checked, render: (r) => fmtInt(r.checked) },
-    { key: 'failed', header: 'Failed', align: 'right', sortValue: (r) => r.failed, render: (r) => fmtInt(r.failed) },
+    { key: 'description', header: 'What is checked', sortValue: (r) => r.description, render: (r) => <span className="block max-w-md whitespace-normal text-ink">{r.description}</span> },
+    { key: 'dataset', header: 'File', sortValue: (r) => nameOf(r.dataset), render: (r) => <span className="block max-w-[12rem] whitespace-normal text-sm text-muted">{nameOf(r.dataset)}</span> },
+    { key: 'severity', header: 'Type', sortValue: (r) => r.severity, render: (r) => <span className="text-xs font-bold uppercase text-muted">{SEV_LABEL[r.severity]}</span> },
+    { key: 'checked', header: 'Values checked', align: 'right', sortValue: (r) => r.checked, render: (r) => fmtInt(r.checked) },
+    { key: 'failed', header: 'Problems', align: 'right', sortValue: (r) => r.failed, render: (r) => fmtInt(r.failed) },
   ]
   const select = (label: string, value: string, set: (v: string) => void, opts: [string, string][]) => (
-    <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+    <label className="flex min-w-0 max-w-full flex-col gap-1 text-xs font-bold uppercase tracking-wide text-ink">
       {label}
-      <select value={value} onChange={(e) => set(e.target.value)} className="rounded-md border border-border bg-surface px-2 py-1.5 text-sm text-ink">
+      <select value={value} onChange={(e) => set(e.target.value)}
+        className="w-full max-w-[18rem] truncate rounded-[2px] border border-border bg-surface px-3 py-2 text-sm font-normal normal-case tracking-normal text-ink">
         {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
     </label>
   )
   return (
     <>
-      <div className="mb-4 grid grid-cols-1 grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiTile label="Rules" value={fmtInt(rules.length)} context={`${fmtInt(records)} values checked`} />
-        <KpiTile label="Passed" tone="ok" value={fmtInt(passed)} context={fmtPct((passed / Math.max(rules.length, 1)) * 100, 1)} />
-        <KpiTile label="Blocking failures" tone={failedErrors ? 'critical' : 'neutral'} value={fmtInt(failedErrors)} context="Error-level rules; any failure blocks deploy" />
-        <KpiTile label="Warnings" tone={failedWarn ? 'warning' : 'neutral'} value={fmtInt(failedWarn)} context="Logged, reviewed, not blocking" />
+      <div className="mb-6">
+        <StatRow>
+          <BigStat above="Checks" value={fmtInt(rules.length)} below={`${fmtInt(records)} values checked in all`} />
+          <BigStat above="Passed" tone="ok" value={fmtInt(passed)} below={`${fmtPct((passed / Math.max(rules.length, 1)) * 100, 0)} of checks`} />
+          <BigStat above="Blocking problems" tone={failedErrors ? 'critical' : 'ink'} value={fmtInt(failedErrors)} below="Any problem here stops the update" />
+          <BigStat above="Warnings" tone={failedWarn ? 'warning' : 'ink'} value={fmtInt(failedWarn)} below="Noted and reviewed, but not blocking" />
+        </StatRow>
       </div>
-      <div className="no-print mb-3 flex flex-wrap items-end gap-3" role="group" aria-label="Filter validation rules">
-        {select('Dataset', dataset, setDataset, [['all', 'All datasets'], ...datasets.map((d) => [d, d] as [string, string])])}
-        {select('Severity', severity, setSeverity, [['all', 'All'], ['error', 'Error'], ['warn', 'Warning'], ['info', 'Info']])}
-        {select('Result', status, setStatus, [['all', 'All'], ['pass', 'Passed'], ['fail', 'Not passed']])}
-        <p className="pb-1.5 text-sm text-muted" aria-live="polite">{fmtInt(filtered.length)} of {fmtInt(rules.length)} rules</p>
+      <div className="no-print mb-4 flex flex-wrap items-end gap-4" role="group" aria-label="Filter the checks">
+        {select('File', dataset, setDataset, [['all', 'All files'], ...datasets.map((d) => [d, nameOf(d)] as [string, string])])}
+        {select('Type', severity, setSeverity, [['all', 'All types'], ['error', SEV_LABEL.error], ['warn', SEV_LABEL.warn], ['info', SEV_LABEL.info]])}
+        {select('Result', status, setStatus, [['all', 'All results'], ['pass', 'Passed'], ['fail', 'Not passed']])}
+        <p className="pb-2 text-sm text-muted" aria-live="polite">Showing {fmtInt(filtered.length)} of {fmtInt(rules.length)} checks</p>
       </div>
-      <SortableTable caption="Validation rules" rows={filtered} columns={cols} rowKey={(r) => r.rule_id} initialSort="status" initialDir="asc" maxHeight={560} />
-      <SourceNote>CareSignal validation log (dq_log.csv) · built {fmtDate(builtAt.slice(0, 10))}</SourceNote>
+      <SortableTable caption="Automatic checks" rows={filtered} columns={cols} rowKey={(r) => r.rule_id} initialSort="status" initialDir="asc" maxHeight={560} />
+      <Source>CareSignal check log, run {fmtDate(builtAt.slice(0, 10))}</Source>
     </>
   )
 }

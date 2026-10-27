@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Button, Card, SourceNote, StatusPill } from '../ui'
-import { HAC_LABELS, STATUS_LABEL, fmt, fmtOrdinal, fmtSigned } from '../../lib/format'
+import { StatusPill } from '../ui'
+import { HAC_LABELS, STATUS_LABEL, fmt } from '../../lib/format'
+import { Note, Source } from './shared'
+import { lower } from './helpers'
 import type { HacMeasureKey, HacParams, HacStatus, HcahpsItem } from '../../lib/types'
 import { HAI_KEYS, eventsToCross, percentileOf, simulate, statusFor, type BaselineMeasure } from '../../lib/simulate'
 import type { HacViewModel } from './viewModel'
@@ -28,7 +30,7 @@ function Slider({ id, label, value, min, max, step, onChange, display, disabled,
   return (
     <div className={disabled ? 'opacity-50' : ''}>
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-medium text-ink">{label}</label>
+        <label htmlFor={id} className="text-[15px] font-semibold text-ink">{label}</label>
         <output htmlFor={id} className="tabular text-sm font-semibold text-ink">{display}</output>
       </div>
       <input
@@ -40,10 +42,10 @@ function Slider({ id, label, value, min, max, step, onChange, display, disabled,
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 w-full accent-[rgb(var(--primary))]"
+        className="mt-2 w-full accent-[#112659]"
         aria-valuetext={display}
       />
-      {hint && <p className="text-[11px] text-muted">{hint}</p>}
+      {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
     </div>
   )
 }
@@ -85,9 +87,9 @@ export default function WhatIfPanel({ vm, params, nurse, nursePeerValues, nurseN
   const nurseVal = nurse?.value ?? null
   const nurseNew = nurseVal == null ? null : Math.min(100, nurseVal + nurseGain)
   const pPeer0 = nursePeerValues ? percentileOf(nurseVal, nursePeerValues) : null
-  const pPeer1 = nursePeerValues ? percentileOf(nurseNew, nursePeerValues) : null
+  const pPeer1 = nurseGain === 0 ? pPeer0 : nursePeerValues ? percentileOf(nurseNew, nursePeerValues) : null
   const pNat0 = nurse?.percentile_national ?? (nurseNationalValues ? percentileOf(nurseVal, nurseNationalValues) : null)
-  const pNat1 = nurseNationalValues ? percentileOf(nurseNew, nurseNationalValues) : null
+  const pNat1 = nurseGain === 0 ? pNat0 : nurseNationalValues ? percentileOf(nurseNew, nurseNationalValues) : null
 
   const reset = () => {
     setPrevented({})
@@ -95,14 +97,20 @@ export default function WhatIfPanel({ vm, params, nurse, nursePeerValues, nurseN
     setNurseGain(0)
   }
 
+  const plainGap = (g: number | null) => (g == null ? 'N/A' : g > 0 ? `${fmt(g, 2)} above the line` : `${fmt(-g, 2)} below the line`)
+
   return (
-    <Card
-      title="What-if simulator"
-      subtitle={`Recomputes the score in your browser using ${vm.view === 'program' ? 'FY2026 program-year values' : 'current-trajectory values'} and the FY2026 Winsorization bounds, means, SDs and cutoff.`}
-      action={<Button onClick={reset}>Reset</Button>}
-    >
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,340px)]">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <p className="max-w-3xl text-[15px] leading-relaxed text-muted">
+          <span className="font-semibold text-ink">How to use this: </span>
+          Move a slider to imagine preventing some infections. The result on the right updates right away and shows whether the hospital would move above or below the penalty line.
+          Nothing is saved, and the math is the same as the rest of this site.
+        </p>
+        <button type="button" onClick={reset} className="no-print shrink-0 border border-[#112659] px-4 py-2 text-sm font-bold text-ink hover:bg-surface-2">Start over</button>
+      </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {HAI_KEYS.map((k) => {
             const b = base.find((x) => x.key === k)!
             const usable = b.value != null && b.predicted != null && b.predicted > 0
@@ -112,88 +120,78 @@ export default function WhatIfPanel({ vm, params, nurse, nursePeerValues, nurseN
               <Slider
                 key={k}
                 id={`wi-${k}`}
-                label={`Prevent ${HAC_LABELS[k]}`}
+                label={`Prevent ${lower(HAC_LABELS[k])}`}
                 value={n}
                 min={0}
                 max={Math.max(max, 1)}
                 step={1}
                 disabled={!usable || max === 0}
                 onChange={(v) => setPrevented((p) => ({ ...p, [k]: v }))}
-                display={usable ? `${n ? `−${n}` : '0'} → SIR ${fmt(sim.values[k], 3)}` : 'No result'}
-                hint={usable ? `Up to ${max} observed · predicted ${fmt(b.predicted, 1)}` : 'No SIR or predicted count for this hospital'}
+                display={usable ? `${n} fewer` : 'No result'}
+                hint={usable ? `This hospital had ${max} in the period. Rate vs expected becomes ${fmt(sim.values[k], 2)}.` : 'No rate or expected count reported for this hospital.'}
               />
             )
           })}
           <Slider
             id="wi-psi90"
-            label="Change PSI 90 composite"
+            label="Change patient safety events"
             value={psiDelta}
             min={-psiRange}
             max={psiRange}
             step={psiStep}
             disabled={psi?.value == null}
             onChange={setPsiDelta}
-            display={psi?.value == null ? 'No result' : `${fmtSigned(psiDelta, 3)} → ${fmt(sim.values.psi90, 3)}`}
-            hint="Negative = fewer patient-safety events (±3 SD range)"
+            display={psi?.value == null ? 'No result' : psiDelta === 0 ? 'No change' : `${fmt(Math.abs(psiDelta), 3)} ${psiDelta < 0 ? 'lower' : 'higher'}`}
+            hint={psi?.value == null ? 'Not reported for this hospital.' : `Slide left for fewer safety events. The combined rate becomes ${fmt(sim.values.psi90, 3)}.`}
           />
           <Slider
             id="wi-nurse"
-            label="Nurse communication top-box"
+            label="Improve nurse communication score"
             value={nurseGain}
             min={0}
             max={nurseVal == null ? 1 : Math.max(1, Math.min(15, 100 - nurseVal))}
             step={1}
             disabled={nurseVal == null}
             onChange={setNurseGain}
-            display={nurseVal == null ? 'Not reported' : `+${nurseGain} pts → ${fmt(nurseNew, 0)}%`}
-            hint="HCAHPS H_COMP_1 'Always' percentage; percentile shift only"
+            display={nurseVal == null ? 'Not reported' : `+${nurseGain} points`}
+            hint={nurseVal == null ? 'Not reported for this hospital.' : `Share of patients who said nurses always communicated well becomes ${fmt(nurseNew, 0)}%. This does not change the safety score.`}
           />
         </div>
 
-        <div aria-live="polite" className={`rounded-card border p-4 motion-safe:transition-colors motion-safe:duration-500 ${STATUS_BG[newStatus]}`}>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Simulated result</h3>
-          <div className="mt-2 flex items-center gap-2">
+        <div aria-live="polite" className={`border-2 p-5 motion-safe:transition-colors motion-safe:duration-500 ${STATUS_BG[newStatus]}`}>
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Your result</h3>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusPill status={newStatus} />
-            {changed && (
-              <span className="text-xs font-medium text-ink motion-safe:animate-pulse">
-                changed from {STATUS_LABEL[vm.status]}
-              </span>
-            )}
+            {changed && <span className="text-sm font-semibold text-ink motion-safe:animate-pulse">was {lower(STATUS_LABEL[vm.status])}</span>}
           </div>
-          <dl className="mt-3 grid grid-cols-1 grid-cols-2 gap-3 text-sm">
+          <dl className="mt-4 space-y-4">
             <div>
-              <dt className="text-muted">Total HAC Score</dt>
-              <dd className="tabular text-xl font-semibold text-ink">{fmt(newTotal, 4)}</dd>
-              <dd className="tabular text-xs text-muted">was {fmt(baseTotal, 4)}</dd>
+              <dt className="text-sm text-muted">New safety score</dt>
+              <dd className="tabular text-4xl font-light text-ink">{fmt(newTotal, 2)}</dd>
+              <dd className="text-sm text-muted">Before: {fmt(baseTotal, 2)}. Penalty line: {fmt(params.cutoff, 2)}.</dd>
             </div>
             <div>
-              <dt className="text-muted">Gap to cutoff</dt>
-              <dd className={`tabular text-xl font-semibold ${newGap != null && newGap > 0 ? 'text-critical' : 'text-ok'}`}>{fmtSigned(newGap, 4)}</dd>
-              <dd className="tabular text-xs text-muted">cutoff {fmt(params.cutoff, 4)}</dd>
+              <dt className="text-sm text-muted">Distance from the line</dt>
+              <dd className={`text-xl font-semibold ${newGap != null && newGap > 0 ? 'text-critical' : 'text-ok'}`}>{plainGap(newGap)}</dd>
             </div>
             {cushion != null && (
-              <div className="col-span-2 text-xs text-muted">Cushion after changes: {cushion} added infection{cushion === 1 ? '' : 's'} in the most sensitive measure would cross the cutoff.</div>
+              <div className="text-sm text-muted">With these changes, about {cushion} more infection{cushion === 1 ? '' : 's'} of the most sensitive type would push it back over the line.</div>
             )}
-            <div className="col-span-2 border-t border-border pt-3">
-              <dt className="text-muted">Nurse communication percentile</dt>
-              <dd className="tabular text-ink">
-                National {fmtOrdinal(pNat0)} → <strong>{fmtOrdinal(pNat1 ?? pNat0)}</strong>
-                {pPeer0 != null && (
-                  <>
-                    {' · '}Peers {fmtOrdinal(pPeer0)} → <strong>{fmtOrdinal(pPeer1)}</strong>
-                  </>
-                )}
+            <div className="border-t border-[#C9D2E3] pt-4">
+              <dt className="text-sm text-muted">Nurse communication ranking</dt>
+              <dd className="text-sm text-ink">
+                Better than {pNat0 == null ? 'N/A' : `${Math.round(pNat0)}%`} of hospitals now, <strong>{(pNat1 ?? pNat0) == null ? 'N/A' : `${Math.round((pNat1 ?? pNat0) as number)}%`}</strong> after the change
+                {pPeer0 != null && pPeer1 != null && <>. Among similar hospitals: {Math.round(pPeer0)}% now, <strong>{Math.round(pPeer1)}%</strong> after.</>}
               </dd>
             </div>
           </dl>
         </div>
       </div>
-      <p className="mt-4 rounded-md bg-surface-2 px-3 py-2 text-xs text-muted">
-        <strong className="font-semibold text-ink">Approximate.</strong> Peer performance and the cutoff are held constant. SIR′ = SIR − prevented ÷ predicted. The VBP
-        Patient Experience domain uses achievement and improvement thresholds from separate CMS files, so this tool shows <em>percentile</em> movement only and does
-        <strong className="font-semibold"> not</strong> reproduce VBP points. National percentile uses HAC-scored hospitals.
-      </p>
-      <SourceNote>Mirrors pipeline/hac_core.py · FY2026 parameters from CMS yq43-i98g · HCAHPS dgck-syfz</SourceNote>
-    </Card>
+      <Note>
+        <strong className="text-ink">This is an estimate.</strong> Other hospitals and the penalty line are held where they are today. A separate Medicare program (Value Based Purchasing)
+        also uses patient survey results, but it scores them with its own thresholds, so this tool only shows how the hospital’s ranking would move.
+      </Note>
+      <Source>CareSignal calculation using the CMS FY2026 Hospital Acquired Condition rules and the CMS patient survey (HCAHPS)</Source>
+    </div>
   )
 }

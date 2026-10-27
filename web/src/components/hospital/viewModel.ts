@@ -46,11 +46,11 @@ export function buildViewModel(h: Hospital, view: HacView, cutoff: number): HacV
     if (!hac) return null
     return {
       view: 'program',
-      label: `FY${hac.fiscal_year} program year (official)`,
+      label: `Official FY${hac.fiscal_year} score`,
       source: hac.source,
       periodText: [
-        { label: 'PSI 90', period: hac.period.psi90 },
-        { label: 'HAI', period: hac.period.hai },
+        { label: 'Patient safety events', period: hac.period.psi90 },
+        { label: 'Infections', period: hac.period.hai },
       ],
       total: hac.total,
       cutoff: hac.cutoff,
@@ -61,7 +61,7 @@ export function buildViewModel(h: Hospital, view: HacView, cutoff: number): HacV
         const z = m?.z_official ?? m?.z_rebuilt ?? null
         return {
           key: k,
-          label: m?.label ?? HAC_LABELS[k],
+          label: HAC_LABELS[k],
           category: m?.category ?? DEFAULT_CAT[k],
           value: m?.value ?? null,
           z,
@@ -81,9 +81,9 @@ export function buildViewModel(h: Hospital, view: HacView, cutoff: number): HacV
   const { weights } = totalScore(zMap)
   return {
     view: 'trajectory',
-    label: t.label,
+    label: 'Latest data, scored with the FY2026 rules (preview)',
     source: t.source,
-    periodText: [{ label: 'HAI', period: t.period }],
+    periodText: [{ label: 'Infections', period: t.period }],
     total: t.total,
     cutoff: hac?.cutoff ?? cutoff,
     gap: t.gap,

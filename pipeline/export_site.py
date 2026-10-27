@@ -19,6 +19,7 @@ import pandas as pd
 
 from pipeline.common import PROCESSED, RAW, ROOT, WEB_DATA, WEB_DOWNLOADS
 from pipeline.metrics import _num, _str, load_measure_map
+from pipeline.plain_text import plain_tree
 
 # Rounding by key name; anything else falls back to 4 dp.
 DP = {
@@ -30,6 +31,7 @@ DP = {
     **dict.fromkeys(["winsor_low", "winsor_high", "mean", "sd", "cutoff"], None),
 }
 DEFAULT_DP = 4
+
 
 PEER_METRICS = {
     "hac_total": "hac_total",
@@ -67,9 +69,10 @@ def _round(obj, key=None):
     return obj
 
 
-def write_json(path: Path, obj) -> int:
+def write_json(path: Path, obj, rounding: bool = True) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
-    s = json.dumps(_round(obj), separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    out = plain_tree(_round(obj) if rounding else obj)
+    s = json.dumps(out, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
     path.write_text(s)
     return len(s)
 
@@ -205,6 +208,8 @@ def main() -> None:
     for name in ("dq.json", "accuracy.json"):
         if not (WEB_DATA / name).exists() and (PROCESSED / name).exists():
             shutil.copy(PROCESSED / name, WEB_DATA / name)
+        if (WEB_DATA / name).exists():  # written by other stages: apply the plain text pass, keep numbers as is
+            write_json(WEB_DATA / name, json.loads((WEB_DATA / name).read_text()), rounding=False)
 
     # downloads
     WEB_DOWNLOADS.mkdir(parents=True, exist_ok=True)

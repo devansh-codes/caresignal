@@ -1,16 +1,24 @@
 import type { EChartsOption } from 'echarts'
-import { Card, CategoryBadge, SourceNote } from '../ui'
+import { CategoryBadge } from '../ui'
 import { Chart } from '../charts/Chart'
 import { baseOption } from '../charts/theme'
-import { CATEGORY_LABEL, fmt, fmtPeriod, fmtSigned, token } from '../../lib/format'
-import type { Category } from '../../lib/types'
+import { CATEGORY_LABEL, HAC_TECH_LABELS, fmt, fmtPeriod, fmtSigned, token } from '../../lib/format'
+import type { Category, HacMeasureKey } from '../../lib/types'
 import type { HacViewModel } from './viewModel'
-import { ViewToggle } from './shared'
-import { CAT_TOKEN, type HacView } from './helpers'
+import { Accordion, Source, ViewToggle } from './shared'
+import { CAT_TOKEN, lower, type HacView } from './helpers'
 
-const SHORT: Record<string, string> = { psi90: 'PSI 90', clabsi: 'CLABSI', cauti: 'CAUTI', ssi: 'SSI', cdi: 'CDI', mrsa: 'MRSA' }
+/** Short plain axis labels that fit under each bar. */
+const SHORT: Record<HacMeasureKey, string> = {
+  psi90: 'Safety events',
+  clabsi: 'Central line',
+  cauti: 'Catheter',
+  ssi: 'Surgical site',
+  cdi: 'C. diff',
+  mrsa: 'MRSA',
+}
 
-/** Waterfall of weighted z contributions (z × weight), cumulating to the Total HAC Score. */
+/** Each measure's share of the safety score, stacked from zero to the total. */
 export default function HacWaterfall({ vm, onView, hasTrajectory }: { vm: HacViewModel; onView: (v: HacView) => void; hasTrajectory: boolean }) {
   const steps = vm.measures.filter((m) => m.weight > 0 && m.contribution != null)
   const missing = vm.measures.filter((m) => !(m.weight > 0 && m.contribution != null))
@@ -18,39 +26,40 @@ export default function HacWaterfall({ vm, onView, hasTrajectory }: { vm: HacVie
   const rows = steps.map((m) => {
     const start = cum
     cum += m.contribution as number
-    return { name: SHORT[m.key], key: m.key, start, end: cum, value: m.contribution as number, cat: m.category, z: m.z, w: m.weight }
+    return { name: SHORT[m.key], label: m.label, start, end: cum, value: m.contribution as number, cat: m.category }
   })
   const total = vm.total ?? cum
   const above = vm.gap != null && vm.gap > 0
-  const data = [
-    ...rows.map((r, i) => [i, r.start, r.end, r.value, r.cat]),
-    [rows.length, 0, total, total, 'total'],
-  ]
+  const data = [...rows.map((r, i) => [i, r.start, r.end, r.value, r.cat]), [rows.length, 0, total, total, 'total']]
   const ext = [0, vm.cutoff, total, ...rows.flatMap((r) => [r.start, r.end])]
-  const pad = (Math.max(...ext) - Math.min(...ext)) * 0.12 || 0.1
+  const pad = (Math.max(...ext) - Math.min(...ext)) * 0.15 || 0.1
   const yMin = Math.floor((Math.min(...ext) - pad) * 10) / 10
   const yMax = Math.ceil((Math.max(...ext) + pad) * 10) / 10
-  const cats = [...rows.map((r) => r.name), 'Total']
+  const cats = [...rows.map((r) => r.name), 'Safety score']
   const colors: Record<string, string> = {
     nursing: token(CAT_TOKEN.nursing),
     shared: token(CAT_TOKEN.shared),
     other: token(CAT_TOKEN.other),
-    total: above ? token('critical') : token('ok'),
+    total: above ? token('critical') : '#112659',
   }
   const b = baseOption()
   const option: EChartsOption = {
     ...b,
-    grid: { left: 8, right: 24, top: 28, bottom: 8, containLabel: true },
-    xAxis: { ...(b.xAxis as object), type: 'category', data: cats, axisTick: { show: false }, axisLabel: { color: token('ink'), fontWeight: 500 } },
-    yAxis: { ...(b.yAxis as object), type: 'value', min: yMin, max: yMax, name: 'Weighted z (higher = worse)', nameTextStyle: { color: token('muted'), fontSize: 11 }, splitLine: { lineStyle: { color: token('border'), type: 'solid' } } },
+    grid: { left: 8, right: 24, top: 36, bottom: 8, containLabel: true },
+    xAxis: { ...(b.xAxis as object), type: 'category', data: cats, axisTick: { show: false }, axisLabel: { color: token('ink'), fontWeight: 600, interval: 0, fontSize: 12 } },
+    yAxis: {
+      ...(b.yAxis as object), type: 'value', min: yMin, max: yMax,
+      name: '↑ Adds to score     ↓ Lowers score', nameTextStyle: { color: token('muted'), fontSize: 12, align: 'left' },
+      splitLine: { lineStyle: { color: token('border'), type: 'solid' } },
+    },
     tooltip: {
       ...(b.tooltip as object),
       trigger: 'item',
       formatter: (p: unknown) => {
         const { dataIndex } = p as { dataIndex: number }
-        if (dataIndex === rows.length) return `<b>Total HAC Score</b><br/>${fmt(total, 4)} (cutoff ${fmt(vm.cutoff, 4)})`
+        if (dataIndex === rows.length) return `<b>Safety score</b><br/>${fmt(total, 2)} (penalty line ${fmt(vm.cutoff, 2)})`
         const r = rows[dataIndex]
-        return `<b>${r.name}</b> · ${CATEGORY_LABEL[r.cat]}<br/>z ${fmt(r.z, 4)} × weight ${fmt(r.w, 3)}<br/>Contribution <b>${fmtSigned(r.value, 4)}</b>`
+        return `<b>${r.label}</b><br/>${CATEGORY_LABEL[r.cat]}<br/>${r.value >= 0 ? 'Adds' : 'Lowers the score by'} <b>${fmt(Math.abs(r.value), 2)}</b>${r.value >= 0 ? ' to the score' : ''}`
       },
     },
     series: [
@@ -64,31 +73,26 @@ export default function HacWaterfall({ vm, onView, hasTrajectory }: { vm: HacVie
           const kind = data[i][4] as string
           const a = api.coord([i, s]), c = api.coord([i, e])
           const band = (api.size?.([1, 0]) as number[])[0]
-          const w = Math.min(36, band * 0.55)
+          const w = Math.min(44, band * 0.6)
           const top = Math.min(a[1], c[1]), h = Math.max(1, Math.abs(a[1] - c[1]))
           const up = e >= s
-          const children: unknown[] = [
-            {
-              type: 'rect',
-              shape: { x: a[0] - w / 2, y: top, width: w, height: h, r: up ? [4, 4, 0, 0] : [0, 0, 4, 4] },
-              style: { fill: colors[kind] },
-            },
-          ]
+          const children: unknown[] = [{ type: 'rect', shape: { x: a[0] - w / 2, y: top, width: w, height: h }, style: { fill: colors[kind] } }]
           if (i < data.length - 1) {
             const next = api.coord([i + 1, e])
             children.push({ type: 'line', shape: { x1: a[0] + w / 2, y1: c[1], x2: next[0] - w / 2, y2: c[1] }, style: { stroke: token('muted'), lineWidth: 1, lineDash: [2, 2] } })
           }
+          const v = data[i][3] as number
           children.push({
             type: 'text',
             style: {
-              text: fmtSigned(data[i][3] as number, 3).replace(/^\+/, i === data.length - 1 ? '' : '+'),
+              text: i === data.length - 1 ? fmt(v, 2) : `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v), 2)}`,
               x: a[0],
               y: up ? top - 4 : top + h + 4,
               align: 'center',
               verticalAlign: up ? 'bottom' : 'top',
               fill: token('ink'),
-              fontSize: 11,
-              fontWeight: i === data.length - 1 ? 700 : 500,
+              fontSize: 12,
+              fontWeight: i === data.length - 1 ? 700 : 600,
             },
           })
           return { type: 'group', children } as never
@@ -97,7 +101,7 @@ export default function HacWaterfall({ vm, onView, hasTrajectory }: { vm: HacVie
           silent: true,
           symbol: 'none',
           data: [
-            { yAxis: vm.cutoff, lineStyle: { color: token('critical'), width: 1.5, type: 'solid' }, label: { formatter: `Cutoff ${fmt(vm.cutoff, 3)}`, color: token('ink'), fontSize: 11, position: 'insideEndTop' } },
+            { yAxis: vm.cutoff, lineStyle: { color: token('critical'), width: 2, type: 'solid' }, label: { show: false } },
             { yAxis: 0, lineStyle: { color: token('muted'), width: 1, type: 'solid' }, label: { show: false } },
           ],
         },
@@ -105,64 +109,84 @@ export default function HacWaterfall({ vm, onView, hasTrajectory }: { vm: HacVie
     ],
   }
 
+  const biggest = [...rows].sort((a, b) => b.value - a.value)[0]
+
   return (
-    <Card
-      title="What drives the score"
-      subtitle="Each measure's weighted contribution (z-score × equal weight). Bars above zero push the hospital toward the penalty."
-      action={<ViewToggle view={vm.view} onChange={onView} hasTrajectory={hasTrajectory} />}
-    >
-      <ul className="mb-2 flex flex-wrap gap-3 text-xs text-muted" aria-label="Legend">
+    <div>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <p className="max-w-3xl text-[15px] leading-relaxed text-muted">
+          <span className="font-semibold text-ink">How to read this: </span>
+          Medicare looks at six safety measures and gives each one equal weight. Bars going up add to the score, which is worse. Bars going down lower it, which is better. The last bar is the total.
+          {biggest && biggest.value > 0 && <> The biggest single driver here is <strong className="text-ink">{lower(biggest.label)}</strong>.</>}
+        </p>
+        <ViewToggle view={vm.view} onChange={onView} hasTrajectory={hasTrajectory} />
+      </div>
+      <ul className="mb-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink" aria-label="Color key">
         {(['nursing', 'shared', 'other'] as Category[]).map((c) => (
-          <li key={c} className="inline-flex items-center gap-1.5">
-            <span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ background: colors[c] }} />
+          <li key={c} className="inline-flex items-center gap-2">
+            <span aria-hidden className="h-3 w-3" style={{ background: colors[c] }} />
             {CATEGORY_LABEL[c]}
           </li>
         ))}
-        <li className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ background: colors.total }} />
-          Total ({above ? 'above cutoff' : 'at or below cutoff'})
+        <li className="inline-flex items-center gap-2">
+          <span aria-hidden className="h-3 w-3" style={{ background: colors.total }} />
+          Total safety score
+        </li>
+        <li className="inline-flex items-center gap-2">
+          <span aria-hidden className="h-0.5 w-5" style={{ background: token('critical') }} />
+          Penalty line ({fmt(vm.cutoff, 2)})
         </li>
       </ul>
       {rows.length ? (
-        <Chart option={option} height={300} ariaLabel={`Waterfall of HAC measure contributions: ${rows.map((r) => `${r.name} ${fmtSigned(r.value, 3)}`).join(', ')}; total ${fmt(total, 3)} against cutoff ${fmt(vm.cutoff, 3)}.`} />
+        <Chart option={option} height={320} ariaLabel={`Chart of what drives the safety score: ${rows.map((r) => `${r.label} ${r.value >= 0 ? 'adds' : 'lowers'} ${fmt(Math.abs(r.value), 2)}`).join(', ')}. Total ${fmt(total, 2)}, penalty line ${fmt(vm.cutoff, 2)}.`} />
       ) : (
-        <p className="py-6 text-center text-sm text-muted">No measure results in this view.</p>
+        <p className="py-6 text-center text-sm text-muted">No measure results to show for this view.</p>
       )}
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[520px] text-sm">
-          <caption className="sr-only">HAC measure values, z-scores, weights and contributions</caption>
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
-              <th scope="col" className="py-1.5 pr-2 font-medium">Measure</th>
-              <th scope="col" className="py-1.5 pr-2 font-medium">Category</th>
-              <th scope="col" className="py-1.5 pr-2 text-right font-medium">Value</th>
-              <th scope="col" className="py-1.5 pr-2 text-right font-medium">z</th>
-              <th scope="col" className="py-1.5 pr-2 text-right font-medium">Weight</th>
-              <th scope="col" className="py-1.5 text-right font-medium">Contribution</th>
-            </tr>
-          </thead>
-          <tbody className="tabular">
-            {vm.measures.map((m) => (
-              <tr key={m.key} className="border-b border-border/60 last:border-0">
-                <th scope="row" className="py-1.5 pr-2 text-left font-medium">{m.label}</th>
-                <td className="py-1.5 pr-2"><CategoryBadge category={m.category} /></td>
-                <td className="py-1.5 pr-2 text-right">{fmt(m.value, m.key === 'psi90' ? 4 : 3)}</td>
-                <td className="py-1.5 pr-2 text-right">{fmt(m.z, 4)}</td>
-                <td className="py-1.5 pr-2 text-right">{m.weight ? fmt(m.weight, 3) : '—'}</td>
-                <td className={`py-1.5 text-right font-medium ${m.contribution != null && m.contribution > 0 ? 'text-ink' : 'text-muted'}`}>{fmtSigned(m.contribution, 4)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
       {missing.length > 0 && (
-        <p className="mt-2 text-xs text-muted">No result (zero weight): {missing.map((m) => SHORT[m.key]).join(', ')}. Weights are split equally across the measures this hospital has.</p>
+        <p className="mt-2 text-sm text-muted">No result for {missing.map((m) => lower(m.label)).join(', ')}. The score is split equally across the measures this hospital does have.</p>
       )}
-      <SourceNote>
-        {vm.view === 'program' ? 'CMS HAC Reduction Program (yq43-i98g), official Winsorized z-scores' : 'CMS Healthcare Associated Infections (77hc-ibv8) + PSI-90 six-digit file (muwa-iene), scored with FY2026 parameters'}
-        {' · '}
-        {vm.periodText.map((p) => `${p.label} ${fmtPeriod(p.period)}`).join(' · ')}
-      </SourceNote>
-    </Card>
+      <div className="mt-5">
+        <Accordion title="Show the numbers behind this chart">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <caption className="sr-only">Safety measure values and how much each adds to the score</caption>
+              <thead>
+                <tr className="border-b-2 border-[#112659] text-left text-xs font-bold uppercase tracking-wider text-ink">
+                  <th scope="col" className="py-2 pr-3">Measure</th>
+                  <th scope="col" className="py-2 pr-3">Who owns it</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Rate</th>
+                  <th scope="col" className="py-2 pr-3 text-right">Points vs average</th>
+                  <th scope="col" className="py-2 text-right">Adds to score</th>
+                </tr>
+              </thead>
+              <tbody className="tabular">
+                {vm.measures.map((m) => (
+                  <tr key={m.key} className="border-b border-[#C9D2E3] last:border-0">
+                    <th scope="row" className="py-2 pr-3 text-left font-semibold text-ink">
+                      {m.label}
+                      <span className="block text-xs font-normal text-muted">{HAC_TECH_LABELS[m.key]}</span>
+                    </th>
+                    <td className="py-2 pr-3"><CategoryBadge category={m.category} /></td>
+                    <td className="py-2 pr-3 text-right">{fmt(m.value, m.key === 'psi90' ? 4 : 3)}</td>
+                    <td className="py-2 pr-3 text-right">{fmtSigned(m.z, 2)}</td>
+                    <td className="py-2 text-right font-semibold">{m.weight ? fmtSigned(m.contribution, 3) : 'Not counted'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-sm text-muted">
+            <strong className="text-ink">Rate</strong> is the infection rate compared with what Medicare expected (1.0 means as expected), or the combined safety event rate.{' '}
+            <strong className="text-ink">Points vs average</strong> shows how far the hospital is from the national average, in standard steps (CMS calls this a z score).
+            Each measure counts equally, so its points are divided by the number of measures.
+          </p>
+        </Accordion>
+      </div>
+      <Source>
+        {vm.view === 'program' ? 'CMS Hospital Acquired Condition Reduction Program, FY2026 official scores' : 'CMS Healthcare Associated Infections file and patient safety file, scored with the FY2026 rules'}
+        {'. '}
+        {vm.periodText.map((p) => `${p.label}: ${fmtPeriod(p.period)}`).join('. ')}
+      </Source>
+    </div>
   )
 }

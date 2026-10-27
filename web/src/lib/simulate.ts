@@ -99,14 +99,14 @@ export interface EventsResult {
  * ΔSIR = SIR − W' (includes any portion above the Winsorization ceiling); events = ceil(ΔSIR × Predicted).
  */
 export function eventsToClear(b: BaselineMeasure, weight: number, gap: number, params: HacParams): EventsResult {
-  if (gap <= 0) return { events: 0, deltaValue: 0, feasible: true, reason: 'Already clear' }
+  if (gap <= 0) return { events: 0, deltaValue: 0, feasible: true, reason: 'Already below the line' }
   if (b.value == null || weight <= 0) return { events: null, deltaValue: null, feasible: false, reason: 'No result for this measure' }
   const p = params.measures[b.key]
   const w = winsorize(b.value, p.winsor_low, p.winsor_high)
   const target = w - (gap / weight) * p.sd
-  if (target < p.winsor_low - EPS) return { events: null, deltaValue: null, feasible: false, reason: 'Winsorization floor reached — this measure alone cannot clear the cutoff' }
+  if (target < p.winsor_low - EPS) return { events: null, deltaValue: null, feasible: false, reason: 'Floor reached: this measure alone cannot clear the line' }
   const deltaValue = b.value - target
-  if (b.key === 'psi90') return { events: null, deltaValue, feasible: true, reason: 'PSI 90 is a composite rate; event count not derivable' }
+  if (b.key === 'psi90') return { events: null, deltaValue, feasible: true, reason: 'Patient safety events are a combined rate, so no event count' }
   if (!b.predicted || b.predicted <= 0) return { events: null, deltaValue, feasible: false, reason: 'No predicted infection count' }
   // Same as hac_core.events_from_sir_change + metrics.patients_to_prevent: ceil, at least 1.
   return { events: Math.max(1, Math.ceil(deltaValue * b.predicted - EPS)), deltaValue, feasible: true, reason: null }
@@ -114,15 +114,15 @@ export function eventsToClear(b: BaselineMeasure, weight: number, gap: number, p
 
 /** Added infections in one measure that would push a clear hospital above the cutoff. */
 export function eventsToCross(b: BaselineMeasure, weight: number, gap: number, params: HacParams): EventsResult {
-  if (gap > 0) return { events: 0, deltaValue: 0, feasible: true, reason: 'Already above cutoff' }
+  if (gap > 0) return { events: 0, deltaValue: 0, feasible: true, reason: 'Already above the line' }
   if (b.value == null || weight <= 0) return { events: null, deltaValue: null, feasible: false, reason: 'No result for this measure' }
   const p = params.measures[b.key]
   const w = winsorize(b.value, p.winsor_low, p.winsor_high)
   const margin = -gap + EPS // strictly above the cutoff (metrics.cushion_events)
   const target = w + (margin / weight) * p.sd
-  if (target > p.winsor_high + EPS) return { events: null, deltaValue: null, feasible: false, reason: 'Winsorization ceiling reached — this measure alone cannot cross the cutoff' }
+  if (target > p.winsor_high + EPS) return { events: null, deltaValue: null, feasible: false, reason: 'Ceiling reached: this measure alone cannot cross the line' }
   const deltaValue = target - b.value
-  if (b.key === 'psi90') return { events: null, deltaValue, feasible: true, reason: 'PSI 90 is a composite rate; event count not derivable' }
+  if (b.key === 'psi90') return { events: null, deltaValue, feasible: true, reason: 'Patient safety events are a combined rate, so no event count' }
   if (!b.predicted || b.predicted <= 0) return { events: null, deltaValue, feasible: false, reason: 'No predicted infection count' }
   return { events: Math.max(1, Math.ceil(deltaValue * b.predicted - EPS)), deltaValue, feasible: true, reason: null }
 }

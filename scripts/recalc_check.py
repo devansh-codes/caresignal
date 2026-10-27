@@ -28,6 +28,7 @@ from openpyxl import load_workbook
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pipeline.export_excel import HAC_MEASURES, HAI_MEASURES, OUT  # noqa: E402
+from pipeline.plain_text import plain  # noqa: E402
 
 TOL = 1e-6
 PROCESSED = ROOT / "data" / "processed"
@@ -153,7 +154,7 @@ def ptp_sweep(path: Path, soffice: str, ccns: list[str]) -> list[str]:
     for ccn in ccns:
         wb = load_workbook(path)
         name = hm.loc[hm["ccn"] == ccn, "name"].iloc[0]
-        wb["Hospital Lookup"]["C5"] = f"{ccn} — {name}"
+        wb["Hospital Lookup"]["C5"] = plain(f"{ccn} — {name}")  # same text pass as the workbook
         f = tmp / f"ptp_{ccn}.xlsx"
         wb.save(f)
         out = load_workbook(recalc(f, soffice), data_only=True)["Patients to Prevent"]

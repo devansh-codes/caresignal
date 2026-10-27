@@ -1,21 +1,21 @@
 import { useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, PageHeader, SourceNote, StateView, StatusPill } from '../components/ui'
-import { loadIndex, loadNational, useData } from '../lib/data'
-import { fmt, fmtInt, fmtSigned, HAC_EVENT_NOUN, HAC_LABELS, STATUS_LABEL } from '../lib/format'
+import { loadIndex, useData } from '../lib/data'
+import { fmt, fmtInt, HAC_EVENT_NOUN, HAC_LABELS, NA, noDash, STATUS_LABEL, titleCase } from '../lib/format'
 import type { HacStatus, IndexEntry } from '../lib/types'
 
 const PAGE_SIZE = 50
-const BEDS: Record<string, string> = { b0_99: '<100 beds', b100_299: '100–299 beds', b300_499: '300–499 beds', b500p: '500+ beds' }
-const TEACH: Record<string, string> = { none: 'Non-teaching', minor: 'Minor teaching', major: 'Major teaching' }
+const BEDS: Record<string, string> = { b0_99: 'Under 100 beds', b100_299: '100 to 299 beds', b300_499: '300 to 499 beds', b500p: '500 or more beds' }
+const TEACH: Record<string, string> = { none: 'Not a teaching hospital', minor: 'Some teaching', major: 'Major teaching hospital' }
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1)
 
-/** Readable label for a peer key such as 'b100_299-minor-urban-south' when national.json lacks one. */
+/** Plain label for a peer key such as 'b100_299-minor-urban-south' (built from the key so it never has dashes). */
 function peerLabelFromKey(key: string) {
   const [bed, teach, loc, region] = key.split('-')
   return [BEDS[bed] ?? bed, teach && (TEACH[teach] ?? teach), loc && cap(loc), region && cap(region)]
     .filter(Boolean)
-    .join(' · ')
+    .join(', ')
 }
 const STATUSES: HacStatus[] = ['penalized', 'near', 'clear', 'exempt', 'no_score']
 type SortKey = 'name' | 'state' | 'hac' | 'gap' | 'tip'
@@ -37,35 +37,30 @@ const sortValue = (e: IndexEntry, k: SortKey) =>
 
 export default function Explore() {
   const index = useData(loadIndex)
-  const national = useData(loadNational)
-  const peerLabels = useMemo(() => {
-    const m = new Map<string, string>()
-    if (national.status === 'ready') national.data.peer_groups.forEach((p) => m.set(p.key, p.label))
-    return m
-  }, [national])
 
   return (
     <div>
       <PageHeader
-        eyebrow="Hospital directory"
+        eyebrow="All hospitals"
         title="Find a hospital"
-        description="Every facility in CMS Hospital General Information, with its FY2026 HAC Reduction Program position. Filter by status, state or peer group, then open a hospital for the full breakdown."
+        description="Every hospital Medicare lists, with where it stands for the FY2026 safety penalty. Use the filters to narrow the list, then select a hospital to see its full profile."
       />
       {index.status === 'loading' && <StateView kind="loading" />}
       {index.status === 'error' && <StateView kind="error" message="The hospital directory could not be loaded." />}
-      {index.status === 'ready' && <Directory entries={index.data} peerLabels={peerLabels} />}
+      {index.status === 'ready' && <Directory entries={index.data} />}
     </div>
   )
 }
 
-function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels: Map<string, string> }) {
+function Directory({ entries }: { entries: IndexEntry[] }) {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const q = params.get('q') ?? ''
   const state = params.get('state') ?? ''
   const status = (params.get('status') ?? '') as HacStatus | ''
   const peer = params.get('peer') ?? ''
-  const hasHac = params.get('hac') === '1'
+  // Default view: only hospitals with a safety score (rows of N/A help nobody). Picking 'No safety score' includes the rest.
+  const hasHac = params.get('hac') !== '0' && status !== 'no_score'
   const sort = (params.get('sort') as SortKey) || 'name'
   const dir = params.get('dir') === 'desc' ? 'desc' : 'asc'
   const page = Math.max(1, Number(params.get('page')) || 1)
@@ -83,11 +78,12 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
   const states = useMemo(() => [...new Set(entries.map((e) => e.state))].filter(Boolean).sort(), [entries])
   const peers = useMemo(() => {
     const keys = [...new Set(entries.map((e) => e.peer).filter((p): p is string => !!p))]
-    return keys.map((k) => ({ key: k, label: peerLabels.get(k) ?? peerLabelFromKey(k) })).sort((a, b) => a.label.localeCompare(b.label))
-  }, [entries, peerLabels])
+    return keys.map((k) => ({ key: k, label: peerLabelFromKey(k) })).sort((a, b) => a.label.localeCompare(b.label))
+  }, [entries])
 
   // Everything except the status filter, so the chip bar shows counts that respond to other filters.
-  const baseFiltered = useMemo(() => {
+  // Chip counts ignore the score toggle so 'No safety score' always shows its real count.
+  const matched = useMemo(() => {
     const term = q.trim().toLowerCase()
     return entries.filter(
       (e) =>
@@ -96,16 +92,16 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
           e.city.toLowerCase().includes(term) ||
           e.ccn.toLowerCase().includes(term)) &&
         (!state || e.state === state) &&
-        (!peer || e.peer === peer) &&
-        (!hasHac || e.hac != null),
+        (!peer || e.peer === peer),
     )
-  }, [entries, q, state, peer, hasHac])
+  }, [entries, q, state, peer])
+  const baseFiltered = useMemo(() => (hasHac ? matched.filter((e) => e.hac != null) : matched), [matched, hasHac])
 
   const statusCounts = useMemo(() => {
     const c: Record<HacStatus, number> = { penalized: 0, near: 0, clear: 0, exempt: 0, no_score: 0 }
-    baseFiltered.forEach((e) => c[e.status]++)
+    matched.forEach((e) => c[e.status]++)
     return c
-  }, [baseFiltered])
+  }, [matched])
 
   const rows = useMemo(() => {
     const f = status ? baseFiltered.filter((e) => e.status === status) : baseFiltered
@@ -120,7 +116,7 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const cur = Math.min(page, pages)
   const pageRows = rows.slice((cur - 1) * PAGE_SIZE, cur * PAGE_SIZE)
-  const anyFilter = q || state || status || peer || hasHac
+  const anyFilter = q || state || status || peer || !hasHac
 
   const setSort = (k: SortKey) => {
     if (sort === k) update({ dir: dir === 'asc' ? 'desc' : 'asc' })
@@ -132,48 +128,48 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
       <Card>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1.5fr_auto]">
           <div>
-            <label htmlFor="f-q" className="mb-1 block text-xs font-medium text-muted">Name, city or CCN</label>
+            <label htmlFor="f-q" className="mb-1.5 block text-sm font-bold text-royal dark:text-primary">Hospital name, city or Medicare ID</label>
             <input
               id="f-q"
               type="search"
               value={q}
               onChange={(e) => update({ q: e.target.value })}
-              placeholder="e.g. Mercy, Boston or 220071"
-              className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="For example Mercy, Boston or 220071"
+              className="h-11 w-full rounded-none border-0 border-b-2 border-yellow bg-surface-2/60 px-3 text-[15px] font-medium text-ink placeholder:text-muted focus:border-royal focus:outline-none"
             />
           </div>
           <div>
-            <label htmlFor="f-state" className="mb-1 block text-xs font-medium text-muted">State</label>
+            <label htmlFor="f-state" className="mb-1.5 block text-sm font-bold text-royal dark:text-primary">State</label>
             <select id="f-state" value={state} onChange={(e) => update({ state: e.target.value })} className={selectCls}>
               <option value="">All states</option>
               {states.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label htmlFor="f-peer" className="mb-1 block text-xs font-medium text-muted">Peer group</label>
+            <label htmlFor="f-peer" className="mb-1.5 block text-sm font-bold text-royal dark:text-primary">Similar hospitals</label>
             <select id="f-peer" value={peer} onChange={(e) => update({ peer: e.target.value })} className={selectCls}>
-              <option value="">All peer groups</option>
+              <option value="">All sizes and types</option>
               {peers.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
             </select>
           </div>
           <div className="flex items-end gap-3">
-            <label className="inline-flex h-10 items-center gap-2 text-sm text-ink">
-              <input type="checkbox" checked={hasHac} onChange={(e) => update({ hac: e.target.checked ? '1' : null })}
+            <label className="inline-flex h-11 items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={!hasHac} onChange={(e) => update({ hac: e.target.checked ? '0' : null })}
                 className="h-4 w-4 rounded border-border accent-[rgb(var(--primary))]" />
-              Has HAC score
+              Include hospitals without a safety score
             </label>
             {anyFilter && (
               <button type="button" onClick={() => setParams(new URLSearchParams(), { replace: true })}
-                className="h-10 text-sm font-medium text-primary hover:underline">
-                Reset
+                className="h-11 whitespace-nowrap text-sm font-bold text-ink underline decoration-yellow decoration-2 underline-offset-4">
+                Clear filters
               </button>
             )}
           </div>
         </div>
 
-        <div role="group" aria-label="Filter by FY2026 HAC status" className="mt-4 flex flex-wrap gap-2">
+        <div role="group" aria-label="Filter by status" className="mt-6 flex flex-wrap gap-2 border-t border-rule pt-5">
           <ChipButton active={!status} onClick={() => update({ status: null })}>
-            All <span className="tabular text-muted">{fmtInt(baseFiltered.length)}</span>
+            {hasHac ? "All with a score" : "All"} <span className="tabular text-muted">{fmtInt(baseFiltered.length)}</span>
           </ChipButton>
           {STATUSES.map((s) => (
             <ChipButton key={s} active={status === s} onClick={() => update({ status: status === s ? null : s })}>
@@ -188,27 +184,51 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm text-muted">
           <span aria-live="polite">
             {fmtInt(rows.length)} {rows.length === 1 ? 'hospital' : 'hospitals'}
-            {status && ` · ${STATUS_LABEL[status]}`}
+            {status && `, ${STATUS_LABEL[status].toLowerCase()}`}
           </span>
-          <span className="text-xs">Select a row to open the hospital’s penalty radar.</span>
+          <span className="text-xs">Select a hospital to open its full profile.</span>
         </div>
         {rows.length === 0 ? (
           <div className="px-4 pb-4">
             <StateView kind="empty" message="No hospitals match these filters. Try clearing a filter." />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: stacked cards so status and score are always visible without sideways scrolling. */}
+          <ul className="divide-y divide-rule border-t border-rule sm:hidden">
+            {pageRows.map((e) => (
+              <li key={e.ccn}>
+                <Link to={`/hospital/${e.ccn}`} className="block px-4 py-4 active:bg-surface-2">
+                  <StatusPill status={e.status} />
+                  <span className="mt-2 block font-bold text-ink">{titleCase(e.name)}</span>
+                  <span className="block text-sm text-body">{titleCase(e.city)}, {e.state}</span>
+                  {e.hac != null && (
+                    <span className="mt-1 block text-sm text-body">
+                      Safety score <span className="tabular font-bold text-ink">{fmt(e.hac, 3)}</span>
+                      {e.gap != null && <>, {e.gap > 0 ? <span className="text-critical">{fmt(e.gap, 3)} above the line</span> : `${fmt(-e.gap, 3)} below the line`}</>}
+                    </span>
+                  )}
+                  {e.tip && e.status === 'penalized' && (
+                    <span className="mt-1 block text-sm text-body">
+                      About {fmtInt(e.tip.events)} fewer {HAC_EVENT_NOUN[e.tip.measure][e.tip.events === 1 ? 0 : 1]} to get below
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[640px] border-t border-border text-sm">
-              <caption className="sr-only">Hospitals with FY2026 HAC Reduction Program status, sortable by column</caption>
-              <thead className="bg-surface-2 text-left text-xs uppercase tracking-wide text-muted">
+              <caption className="sr-only">Hospitals and where they stand for the FY2026 safety penalty, sortable by column</caption>
+              <thead className="bg-navy text-left text-xs uppercase tracking-wide text-white">
                 <tr>
                   <Th k="name" sort={sort} dir={dir} onSort={setSort}>Hospital</Th>
                   <Th k="state" sort={sort} dir={dir} onSort={setSort}>Location</Th>
-                  <th scope="col" className="px-4 py-2 font-medium">Status</th>
-                  <Th k="hac" sort={sort} dir={dir} onSort={setSort} align="right">Total HAC</Th>
-                  <Th k="gap" sort={sort} dir={dir} onSort={setSort} align="right">Gap to cutoff</Th>
-                  <Th k="tip" sort={sort} dir={dir} onSort={setSort} className="hidden md:table-cell">Tipping measure</Th>
-                  <th scope="col" className="hidden px-4 py-2 font-medium lg:table-cell">Peer group</th>
+                  <th scope="col" className="px-4 py-3 font-bold">Status</th>
+                  <Th k="hac" sort={sort} dir={dir} onSort={setSort} align="right">Safety score</Th>
+                  <Th k="gap" sort={sort} dir={dir} onSort={setSort} align="right">Distance to line</Th>
+                  <Th k="tip" sort={sort} dir={dir} onSort={setSort} className="hidden md:table-cell">Biggest opportunity</Th>
+                  <th scope="col" className="hidden px-4 py-3 font-bold lg:table-cell">Similar hospitals</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -217,36 +237,42 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
                     className="cursor-pointer hover:bg-surface-2">
                     <td className="px-4 py-2.5">
                       <Link to={`/hospital/${e.ccn}`} onClick={(ev) => ev.stopPropagation()}
-                        className="font-medium text-ink hover:text-primary hover:underline">
-                        {e.name}
+                        className="font-bold text-ink hover:underline hover:decoration-yellow hover:decoration-2 hover:underline-offset-4">
+                        {titleCase(e.name)}
                       </Link>
-                      <div className="text-xs text-muted">CCN {e.ccn} · {e.type}</div>
+                      <div className="text-xs text-muted">Medicare ID {e.ccn}. {noDash(e.type)}</div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-muted">{e.city}, {e.state}</td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-body">{titleCase(e.city)}, {e.state}</td>
                     <td className="px-4 py-2.5"><StatusPill status={e.status} /></td>
-                    <td className="tabular px-4 py-2.5 text-right text-ink">{fmt(e.hac, 4)}</td>
+                    <td className="tabular px-4 py-2.5 text-right text-ink">{fmt(e.hac, 3)}</td>
                     <td className={`tabular px-4 py-2.5 text-right ${e.gap != null && e.gap > 0 ? 'font-medium text-critical' : 'text-ink'}`}>
-                      {fmtSigned(e.gap, 4)}
+                      {e.gap == null ? NA : e.gap > 0 ? `${fmt(e.gap, 3)} above` : `${fmt(-e.gap, 3)} below`}
                     </td>
                     <td className="hidden px-4 py-2.5 md:table-cell">
                       {e.tip ? (
                         <span>
                           <span className="text-ink">{HAC_LABELS[e.tip.measure]}</span>
                           <span className="block text-xs text-muted">
-                            {e.status === 'penalized' ? '~' : ''}{fmtInt(e.tip.events)} {HAC_EVENT_NOUN[e.tip.measure][e.tip.events === 1 ? 0 : 1]}
-                            {e.status === 'penalized' ? ' to clear' : ' to cross'}
+                            {e.status === 'penalized'
+                              ? `About ${fmtInt(e.tip.events)} fewer ${HAC_EVENT_NOUN[e.tip.measure][e.tip.events === 1 ? 0 : 1]} to get below`
+                              : `${fmtInt(e.tip.events)} more ${HAC_EVENT_NOUN[e.tip.measure][e.tip.events === 1 ? 0 : 1]} would cross`}
                           </span>
                         </span>
-                      ) : <span className="text-muted">—</span>}
+                      ) : e.status === 'clear' ? (
+                        <span className="text-ok">Not needed</span>
+                      ) : e.status === 'near' ? (
+                        <span className="text-body">See profile</span>
+                      ) : <span className="text-muted" title="Not reported by CMS">{NA}</span>}
                     </td>
                     <td className="hidden px-4 py-2.5 text-xs text-muted lg:table-cell">
-                      {e.peer ? peerLabels.get(e.peer) ?? peerLabelFromKey(e.peer) : '—'}
+                      {e.peer ? peerLabelFromKey(e.peer) : NA}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          </>
         )}
         {pages > 1 && (
           <nav aria-label="Pagination" className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-sm">
@@ -261,7 +287,7 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
         )}
         <div className="px-4 pb-4">
           <SourceNote>
-            CMS Hospital General Information (xubh-q36u); FY2026 HAC Reduction Program (yq43-i98g). Gap = Total HAC Score − FY2026 cutoff; positive values are above the cutoff. Tipping measure: fewest whole infections in a single HAI measure that would change status (approximate).
+            CMS Hospital General Information and the CMS Hospital Acquired Condition Reduction Program, FY2026. The safety score is the official Total HAC Score; higher is worse. Distance to line compares it with this year's penalty line. Biggest opportunity is the infection type where the fewest cases would change the hospital's status. These counts are estimates.
           </SourceNote>
         </div>
       </Card>
@@ -270,9 +296,9 @@ function Directory({ entries, peerLabels }: { entries: IndexEntry[]; peerLabels:
 }
 
 const selectCls =
-  'h-10 w-full rounded-md border border-border bg-surface px-2 text-sm text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30'
+  'h-11 w-full rounded-none border-0 border-b-2 border-yellow bg-surface-2/60 px-2 text-[15px] font-medium text-ink focus:border-royal focus:outline-none'
 const pagerCls =
-  'rounded-md border border-border bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40'
+  'rounded-sm bg-yellow px-4 py-2 font-bold text-[#112659] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40'
 
 function ChipButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -280,8 +306,8 @@ function ChipButton({ active, onClick, children }: { active: boolean; onClick: (
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-sm transition ${
-        active ? 'border-primary bg-primary/10 text-ink' : 'border-border bg-surface text-ink hover:bg-surface-2'
+      className={`inline-flex items-center gap-2 rounded-sm border px-3 py-1.5 text-sm transition ${
+        active ? 'border-navy bg-navy/5 text-ink ring-1 ring-navy' : 'border-rule bg-surface text-ink hover:bg-surface-2'
       }`}
     >
       {children}
@@ -296,9 +322,9 @@ function Th({ k, sort, dir, onSort, children, align = 'left', className = '' }: 
   const active = sort === k
   return (
     <th scope="col" aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      className={`px-4 py-2 font-medium ${align === 'right' ? 'text-right' : ''} ${className}`}>
+      className={`px-4 py-3 font-bold ${align === 'right' ? 'text-right' : ''} ${className}`}>
       <button type="button" onClick={() => onSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-ink ${active ? 'text-ink' : ''}`}>
+        className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-yellow ${active ? 'text-yellow' : ''}`}>
         {children}
         <span aria-hidden className="text-[10px]">{active ? (dir === 'asc' ? '▲' : '▼') : '↕'}</span>
       </button>

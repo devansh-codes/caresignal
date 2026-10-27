@@ -78,18 +78,19 @@ export function SearchBar({ size = 'md', autoFocus = false, onNavigate, label = 
     }
   }
 
+  // Reference style: white field, square corners, yellow bottom rule, magnifier on the right.
   const sizeCls = {
-    sm: 'h-9 text-sm pl-9',
-    md: 'h-11 text-base pl-10',
-    lg: 'h-14 text-lg pl-12 shadow-sm',
+    sm: 'h-10 text-sm pl-3 pr-10',
+    md: 'h-12 text-base pl-4 pr-11',
+    lg: 'h-16 text-lg pl-6 pr-14 shadow-card',
   }[size]
-  const iconCls = { sm: 'left-2.5 h-4 w-4', md: 'left-3 h-5 w-5', lg: 'left-4 h-5 w-5' }[size]
+  const iconCls = { sm: 'right-3 h-4 w-4', md: 'right-3.5 h-5 w-5', lg: 'right-5 h-6 w-6' }[size]
   const showList = open && term.length >= 2
 
   return (
     <div ref={wrapRef} className="relative w-full">
       <label htmlFor={`${id}-input`} className="sr-only">{label}</label>
-      <svg aria-hidden viewBox="0 0 24 24" className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted ${iconCls}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <svg aria-hidden viewBox="0 0 24 24" className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-ink ${iconCls}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <circle cx="11" cy="11" r="7" />
         <path d="m20 20-3.5-3.5" />
       </svg>
@@ -104,7 +105,7 @@ export function SearchBar({ size = 'md', autoFocus = false, onNavigate, label = 
         autoComplete="off"
         spellCheck={false}
         autoFocus={autoFocus}
-        placeholder={size === 'sm' ? 'Search hospital, city or CCN' : 'Search by hospital name, city, state or CCN (e.g. 010001)'}
+        placeholder={size === 'sm' ? 'Hospital, city or ID' : 'Type a hospital name, city, state or Medicare ID'}
         value={q}
         onFocus={() => {
           ensureIndex()
@@ -117,14 +118,14 @@ export function SearchBar({ size = 'md', autoFocus = false, onNavigate, label = 
           ensureIndex()
         }}
         onKeyDown={onKeyDown}
-        className={`w-full rounded-lg border border-border bg-surface pr-3 text-ink placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 ${sizeCls}`}
+        className={`w-full rounded-none border-0 border-b-2 border-yellow bg-surface font-medium text-ink placeholder:font-medium placeholder:text-muted focus:border-royal focus:outline-none focus:ring-0 ${sizeCls}`}
       />
       {showList && (
         <ul
           id={listId}
           role="listbox"
           aria-label="Matching hospitals"
-          className="absolute left-0 right-0 z-40 mt-1 max-h-96 overflow-auto rounded-lg border border-border bg-surface py-1 shadow-xl"
+          className="absolute left-0 right-0 z-50 mt-1 max-h-96 overflow-auto border border-rule bg-surface py-1 shadow-xl"
         >
           {error && <li className="px-3 py-2 text-sm text-muted">Hospital list could not be loaded.</li>}
           {!error && !index && <li className="px-3 py-2 text-sm text-muted">Loading hospital list…</li>}
@@ -145,9 +146,9 @@ export function SearchBar({ size = 'md', autoFocus = false, onNavigate, label = 
               className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-2 ${i === active ? 'bg-surface-2' : ''}`}
             >
               <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-ink">{r.name}</span>
+                <span className="block truncate text-sm font-bold text-ink">{r.name}</span>
                 <span className="block text-xs text-muted">
-                  {r.city}, {r.state} · CCN {r.ccn}
+                  {r.city}, {r.state}. Medicare ID {r.ccn}
                 </span>
               </span>
               <StatusPill status={r.status} />

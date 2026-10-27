@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, InfoTip, StatusPill } from '../ui'
+import { StatusPill } from '../ui'
 import type { Hospital } from '../../lib/types'
+import { plain, statusSentence } from './helpers'
+import { titleCase } from '../../lib/format'
+import { Eyebrow, NavyButton, YellowButton } from './shared'
 
 function Stars({ n }: { n: number | null }) {
-  if (n == null) return <span className="text-muted">Overall rating not available</span>
+  if (n == null) return <span className="text-muted">No overall star rating</span>
   return (
-    <span className="inline-flex items-center gap-1" role="img" aria-label={`CMS overall hospital rating ${n} of 5 stars`}>
-      <span aria-hidden className="tracking-tight text-ink">
+    <span className="inline-flex items-center gap-1.5" role="img" aria-label={`Medicare overall star rating: ${n} out of 5`}>
+      <span aria-hidden className="text-[#E3A42B]">
         {'★'.repeat(n)}
         <span className="text-border">{'★'.repeat(5 - n)}</span>
       </span>
-      <span className="text-muted">{n}/5 CMS overall</span>
+      <span className="text-ink">{n} of 5 stars</span>
     </span>
   )
 }
@@ -28,55 +31,63 @@ export default function HospitalHeader({ h }: { h: Hospital }) {
     }
   }
   const status = h.hac?.status ?? 'no_score'
+  const cityState = `${titleCase(h.city)}, ${h.state}`
   return (
-    <header className="mb-5">
-      <nav aria-label="Breadcrumb" className="no-print mb-2 text-xs text-muted">
-        <Link to="/" className="hover:text-ink">Home</Link>
-        <span aria-hidden> / </span>
-        <Link to="/hospitals" className="hover:text-ink">Hospitals</Link>
-        <span aria-hidden> / </span>
-        <span className="text-ink">{h.ccn}</span>
+    <header className="pb-2 pt-2">
+      <nav aria-label="Breadcrumb" className="no-print mb-4 text-sm text-muted">
+        <Link to="/" className="font-semibold text-ink underline decoration-[#FECA71] decoration-2 underline-offset-4">Home</Link>
+        <span aria-hidden className="mx-2">/</span>
+        <Link to="/hospitals" className="font-semibold text-ink underline decoration-[#FECA71] decoration-2 underline-offset-4">All hospitals</Link>
+        <span aria-hidden className="mx-2">/</span>
+        <span>{titleCase(plain(h.name))}</span>
       </nav>
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{h.name}</h1>
-            <StatusPill status={status} />
-          </div>
-          <p className="mt-1 text-sm text-muted">
-            {h.address && <>{h.address}, </>}
-            {h.city}, {h.state} {h.zip} · CCN <span className="font-mono text-ink">{h.ccn}</span>
-          </p>
-          <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-            <div className="flex gap-1.5"><dt className="text-muted">Type</dt><dd className="text-ink">{h.type || '—'}</dd></div>
-            <div className="flex gap-1.5"><dt className="text-muted">Ownership</dt><dd className="text-ink">{h.ownership || '—'}</dd></div>
-            <div className="flex gap-1.5"><dt className="sr-only">Rating</dt><dd><Stars n={h.overall_rating} /></dd></div>
-            <div className="flex items-center gap-1.5">
-              <dt className="text-muted">Peer group</dt>
-              <dd className="flex items-center gap-1 text-ink">
-                {h.peer ? (
-                  <>
-                    {h.peer.label} <span className="text-muted">(n={h.peer.n})</span>
-                    {h.peer.fallback && <InfoTip text="The full peer group (bed size × teaching × urban/rural × region) had fewer than 15 HAC-scored hospitals, so this hospital is compared within bed size × teaching only." />}
-                  </>
-                ) : (
-                  <span className="text-muted">Not assigned (no cost report match)</span>
-                )}
-              </dd>
-            </div>
-          </dl>
+      <Eyebrow>Hospital profile</Eyebrow>
+      <h1 className="mt-1 text-3xl font-bold leading-tight text-ink sm:text-[44px]">{titleCase(plain(h.name))}</h1>
+      <p className="mt-1 text-lg text-muted">{cityState}</p>
+
+      <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div>
+          <div className="mb-2"><StatusPill status={status} /></div>
+          <p className="max-w-3xl text-lg leading-relaxed text-ink sm:text-xl">{statusSentence(h)}</p>
         </div>
-        <div className="no-print flex shrink-0 gap-2">
-          <Button variant="primary" onClick={() => window.print()} ariaLabel="Print a one-page brief for this hospital">
-            <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4 fill-current"><path d="M4 1h8v4H4zM2 6h12a1 1 0 0 1 1 1v5h-3v3H4v-3H1V7a1 1 0 0 1 1-1Zm3 6v2h6v-2z" /></svg>
-            Print brief
-          </Button>
-          <Button onClick={copy} ariaLabel="Copy a link to this hospital">
-            <svg aria-hidden viewBox="0 0 16 16" className="h-4 w-4 fill-current"><path d="M6.5 9.5l3-3M7 4.5l1.2-1.2a2.5 2.5 0 0 1 3.5 3.5L10.5 8M9 11.5l-1.2 1.2a2.5 2.5 0 0 1-3.5-3.5L5.5 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            <span aria-live="polite">{copied ? 'Copied' : 'Copy link'}</span>
-          </Button>
+        <div className="no-print flex flex-wrap gap-3">
+          <YellowButton onClick={() => window.print()} ariaLabel="Print a one page summary of this hospital">
+            Print a one page summary
+          </YellowButton>
+          <NavyButton onClick={copy} ariaLabel="Copy a link to this hospital page">
+            <span aria-live="polite">{copied ? 'Link copied' : 'Copy link'}</span>
+          </NavyButton>
         </div>
       </div>
+
+      <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-3 border-t border-[#C9D2E3] pt-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Hospital type</dt>
+          <dd className="mt-0.5 text-ink">{plain(h.type) || 'N/A'}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Owned by</dt>
+          <dd className="mt-0.5 text-ink">{plain(h.ownership) || 'N/A'}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Medicare star rating</dt>
+          <dd className="mt-0.5"><Stars n={h.overall_rating} /></dd>
+        </div>
+        <div>
+          <dt className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Compared with</dt>
+          <dd className="mt-0.5 text-ink">
+            {h.peer ? (
+              <>
+                {h.peer.n} similar hospitals <span className="text-muted">({plain(h.peer.label)})</span>
+                {h.peer.fallback && <span className="block text-xs text-muted">Grouped by size and teaching status only, because the full group was too small.</span>}
+              </>
+            ) : (
+              <span className="text-muted">No group of similar hospitals (size data not available)</span>
+            )}
+          </dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-xs text-muted">Medicare ID (CCN) {h.ccn}{h.address ? ` · ${titleCase(plain(h.address))}, ${cityState} ${h.zip}` : ''}</p>
     </header>
   )
 }

@@ -1,3 +1,4 @@
+import { titleCase } from '../../lib/format'
 /**
  * Server-render smoke test: every hospital-view component renders against real exported JSON
  * for penalized, near, clear and no-HAC hospitals, in both HAC views. Skips before `make data`.
@@ -8,9 +9,10 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { Hospital, Measures, National } from '../../lib/types'
 import { HospitalProvider } from './shared'
+import { plain } from './helpers'
 import { buildViewModel } from './viewModel'
 import HospitalHeader from './HospitalHeader'
-import KpiRow from './KpiRow'
+import StandingStats from './StandingStats'
 import PenaltyGauge from './PenaltyGauge'
 import HacWaterfall from './HacWaterfall'
 import PatientsToPrevent from './PatientsToPrevent'
@@ -19,7 +21,7 @@ import PeerDistribution from './PeerDistribution'
 import HcahpsCard from './HcahpsCard'
 import HaiTable from './HaiTable'
 import ReadmissionTable from './ReadmissionTable'
-import AdditionalMeasures from './AdditionalMeasures'
+import { SafetyIndicators, SepsisAndVbp } from './AdditionalMeasures'
 import NoHacNotice from './NoHacNotice'
 import PrintBrief from './PrintBrief'
 
@@ -52,7 +54,7 @@ describe.skipIf(!haveData)('hospital view renders with real data', () => {
     it(`renders: ${name}`, () => {
       if (!hosp) return // case not present in this sample
       const views = hosp.hac ? (hosp.trajectory ? (['program', 'trajectory'] as const) : (['program'] as const)) : []
-      const parts: ReactElement[] = [h(HospitalHeader, { h: hosp }), h(KpiRow, { h: hosp })]
+      const parts: ReactElement[] = [h(HospitalHeader, { h: hosp }), h(StandingStats, { h: hosp })]
       for (const v of views) {
         const vm = buildViewModel(hosp, v, national.hac_params.cutoff)!
         expect(vm).not.toBeNull()
@@ -65,16 +67,21 @@ describe.skipIf(!haveData)('hospital view renders with real data', () => {
       }
       if (!hosp.hac) parts.push(h(NoHacNotice, { h: hosp }))
       parts.push(
-        h(PeerDistribution, { h: hosp, peers: null }),
+        h(PeerDistribution, { h: hosp, peers: null, groupId: 'hac' }),
+        h(PeerDistribution, { h: hosp, peers: null, groupId: 'experience' }),
         h(HcahpsCard, { h: hosp }),
         h(HaiTable, { h: hosp }),
         h(ReadmissionTable, { h: hosp }),
-        h(AdditionalMeasures, { h: hosp }),
+        h(SafetyIndicators, { h: hosp }),
+        h(SepsisAndVbp, { h: hosp }),
         h(PrintBrief, { h: hosp, manifest: null }),
       )
       const html = renderToString(h(MemoryRouter, null, h(HospitalProvider, { value: { hospital: hosp, national, measures }, children: parts })))
-      expect(html).toContain(hosp.name.replace(/&/g, '&amp;'))
+      expect(html).toContain(titleCase(plain(hosp.name)).replace(/&/g, '&amp;'))
       expect(html).not.toMatch(/NaN|undefined|\[object Object\]/)
+      // Plain language rule: no em or en dashes anywhere in rendered text
+      const text = html.replace(/<[^>]+>/g, ' ')
+      expect(text).not.toMatch(/[–—]/)
     })
   }
 })

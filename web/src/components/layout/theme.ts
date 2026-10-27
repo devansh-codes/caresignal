@@ -6,15 +6,15 @@ export function readTheme(): ThemeChoice {
     const v = localStorage.getItem(KEY)
     if (v === 'light' || v === 'dark' || v === 'system') return v
   } catch {
-    /* storage unavailable: fall back to system */
+    /* storage unavailable: fall back to the light default */
   }
-  return 'system'
+  return 'light'
 }
 
 export function applyTheme(choice: ThemeChoice) {
   const root = document.documentElement
-  if (choice === 'system') root.removeAttribute('data-theme')
-  else root.setAttribute('data-theme', choice)
+  // 'dark-system' only turns dark when the OS prefers dark (see index.css); light is the default.
+  root.setAttribute('data-theme', choice === 'system' ? 'dark-system' : choice)
   try {
     localStorage.setItem(KEY, choice)
   } catch {

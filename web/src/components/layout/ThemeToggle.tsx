@@ -10,7 +10,7 @@ const OPTIONS: { value: ThemeChoice; label: string; icon: string }[] = [
 export function ThemeToggle() {
   const [choice, setChoice] = useState<ThemeChoice>(readTheme)
   return (
-    <div role="radiogroup" aria-label="Color theme" className="inline-flex rounded-md border border-border bg-surface p-0.5">
+    <div role="radiogroup" aria-label="Color theme" className="inline-flex rounded-sm border border-rule bg-surface p-0.5">
       {OPTIONS.map((o) => {
         const active = o.value === choice
         return (
@@ -25,7 +25,7 @@ export function ThemeToggle() {
               setChoice(o.value)
               applyTheme(o.value)
             }}
-            className={`rounded p-1.5 transition ${active ? 'bg-surface-2 text-ink' : 'text-muted hover:text-ink'}`}
+            className={`rounded-sm p-1.5 transition ${active ? 'bg-surface-2 text-ink' : 'text-muted hover:text-ink'}`}
           >
             <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d={o.icon} />

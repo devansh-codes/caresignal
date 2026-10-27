@@ -19,15 +19,15 @@ def render(nat: dict) -> str:
     c = nat["counts"]
     fy = nat["hac_params"]["fiscal_year"]
     lines = [
-        f"_Computed by the pipeline from public CMS files (build {nat['built_at'][:10]}). "
-        "Each finding lists the source dataset and its reporting period._",
+        f"_Worked out by the pipeline from public CMS files (built {nat['built_at'][:10]}). "
+        "Each finding names its source file and time period._",
         "",
-        f"- **{c['hac_scored']:,}** of {c['facilities']:,} facilities have a FY{fy} Total HAC Score; "
-        f"cutoff = **{nat['hac_params']['cutoff']:.5f}** (`yq43-i98g`).",
+        f"- **{c['hac_scored']:,}** of {c['facilities']:,} hospitals have a FY{fy} safety score (Total HAC Score). "
+        f"The penalty line is a score above **{nat['hac_params']['cutoff']:.5f}** (`yq43-i98g`).",
     ]
     for i in nat["insights"]:
-        lines.append(f"- **{i['title']}: {i['value']}.** {i['detail']}  ")
-        lines.append(f"  <sub>Source: `{i['source']}` · {i['period']}</sub>")
+        lines.append(f"- **{i['title']}** ({i['value']}). {i['detail']}  ")
+        lines.append(f"  <sub>Source: {i['source']}. {i['period']}</sub>")
     return "\n".join(lines)
 
 

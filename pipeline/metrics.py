@@ -20,27 +20,28 @@ import yaml
 
 from pipeline import hac_core
 from pipeline.common import CONFIG, PROCESSED
+from pipeline.plain_text import human_period
 
 MEASURES = hac_core.MEASURES  # psi90, clabsi, cauti, ssi, cdi, mrsa
 HAI_MEASURES = hac_core.HAI_MEASURES
 HAC_LABELS = {
-    "psi90": "PSI 90 Patient Safety",
-    "clabsi": "CLABSI",
-    "cauti": "CAUTI",
-    "ssi": "SSI (colon + hysterectomy)",
-    "cdi": "C. difficile (CDI)",
-    "mrsa": "MRSA bacteremia",
+    "psi90": "Patient safety events (PSI 90)",
+    "clabsi": "Central line infections (CLABSI)",
+    "cauti": "Catheter infections (CAUTI)",
+    "ssi": "Surgical site infections (SSI)",
+    "cdi": "C. diff infections (CDI)",
+    "mrsa": "MRSA bloodstream infections",
 }
 # Fixed order used to break ties when two measures need the same number of events.
 TIE_ORDER = {m: i for i, m in enumerate(["cauti", "clabsi", "cdi", "mrsa", "ssi", "psi90"])}
 
 HAI_LABELS = {
-    "clabsi": "CLABSI",
-    "cauti": "CAUTI",
-    "ssi_colon": "SSI – colon surgery",
-    "ssi_hyst": "SSI – abdominal hysterectomy",
-    "mrsa": "MRSA bacteremia",
-    "cdi": "C. difficile",
+    "clabsi": "Central line infections (CLABSI)",
+    "cauti": "Catheter infections (CAUTI)",
+    "ssi_colon": "Surgical site infections after colon surgery",
+    "ssi_hyst": "Surgical site infections after abdominal hysterectomy",
+    "mrsa": "MRSA bloodstream infections",
+    "cdi": "C. diff infections (CDI)",
 }
 HAI_IDS = {"clabsi": "HAI_1", "cauti": "HAI_2", "ssi_colon": "HAI_3", "ssi_hyst": "HAI_4", "mrsa": "HAI_5", "cdi": "HAI_6"}
 
@@ -65,16 +66,18 @@ HRRP_LABELS = {
     "AMI": "Heart attack (AMI)",
     "HF": "Heart failure",
     "PN": "Pneumonia",
-    "COPD": "COPD",
-    "CABG": "Coronary artery bypass graft (CABG)",
-    "HIP-KNEE": "Elective hip/knee replacement",
+    "COPD": "COPD (chronic lung disease)",
+    "CABG": "Heart bypass surgery (CABG)",
+    "HIP-KNEE": "Planned hip or knee replacement",
 }
 
 NOT_SUBMITTED_REASON = (
-    "No submitted data: CMS assigned the maximum z-score (footnote 18), so reporting data is the lever"
+    "The hospital did not send CMS this data, so CMS gave it the worst possible score for this measure "
+    "(footnote 18). Reporting the data is the first step"
 )
 PTP_PROXY_NOTE = (
-    "Predicted infections are taken from the current HAI file (proxy); the FY2026 HAC file publishes SIRs only."
+    "Expected infection counts come from the newer CMS infections file, because the FY2026 penalty file "
+    "only publishes infection rates. Treat the result as an estimate."
 )
 
 
@@ -192,7 +195,7 @@ def peer_label(bed, teach, loc, region, rules) -> str:
         parts.append(rules["location_labels"].get(loc, loc))
     if region is not None:
         parts.append(rules["region_labels"].get(region, region))
-    return " · ".join(parts)
+    return ", ".join(parts)
 
 
 def assign_peer_groups(h: pd.DataFrame, scored: set[str], rules: dict) -> pd.DataFrame:
@@ -240,25 +243,25 @@ def patients_to_prevent(values: dict, weights: dict, predicted: dict, params: di
         p = params[m]
         row = {"measure": m, "events": None, "delta_sir": None, "feasible": False, "reason": None}
         if gap is None:
-            row["reason"] = "No Total HAC Score"
+            row["reason"] = "This hospital has no safety score"
         elif v is None and w > 0:
             row["reason"] = NOT_SUBMITTED_REASON
         elif v is None or w <= 0:
-            row["reason"] = "No result for this measure"
+            row["reason"] = "CMS reported no result for this measure"
         elif gap <= 0:
-            row.update(events=0, delta_sir=0.0, feasible=True, reason="Already at or below the cutoff")
+            row.update(events=0, delta_sir=0.0, feasible=True, reason="Already at or below the penalty line")
         else:
             d = hac_core.required_value_change(v, p["winsor_low"], p["winsor_high"], p["mean"], p["sd"], w, gap)
             if d is None:
-                row["reason"] = "Winsorization floor: this measure alone cannot close the gap"
+                row["reason"] = "Already near the best possible score on this measure, so improving it alone cannot close the gap"
             else:
                 row["delta_sir"] = d
                 if m == "psi90":
-                    row["reason"] = "PSI 90 is a composite rate; event counts cannot be derived from public data"
+                    row["reason"] = "Patient safety events are reported as a combined rate, so public data cannot be turned into a count of events"
                 else:
                     ev = hac_core.events_from_sir_change(d, predicted.get(m))
                     if ev is None:
-                        row["reason"] = "No predicted infection count in the current HAI file"
+                        row["reason"] = "CMS did not publish an expected infection count for this hospital"
                     else:
                         row.update(events=max(ev, 1), feasible=True)
         rows.append(row)
@@ -274,21 +277,21 @@ def cushion_events(values: dict, weights: dict, predicted: dict, params: dict, g
         p = params[m]
         row = {"measure": m, "events": None, "delta_sir": None, "feasible": False, "reason": None}
         if gap is None or gap > 0:
-            row["reason"] = "Not applicable (above cutoff or no score)"
+            row["reason"] = "Does not apply (already above the penalty line, or no safety score)"
         elif v is None and w > 0:
             row["reason"] = NOT_SUBMITTED_REASON
         elif v is None or w <= 0:
-            row["reason"] = "No result for this measure"
+            row["reason"] = "CMS reported no result for this measure"
         else:
             margin = -gap + 1e-9  # strictly above the cutoff
             d = hac_core.required_value_increase(v, p["winsor_low"], p["winsor_high"], p["mean"], p["sd"], w, margin)
             if d is None:
-                row["reason"] = "Winsorization cap: added infections in this measure alone cannot cross the cutoff"
+                row["reason"] = "Already near the worst possible score on this measure, so more infections here alone would not cross the penalty line"
             else:
                 ev = hac_core.events_from_sir_change(d, predicted.get(m))
                 row["delta_sir"] = d
                 if ev is None:
-                    row["reason"] = "No predicted infection count in the current HAI file"
+                    row["reason"] = "CMS did not publish an expected infection count for this hospital"
                 else:
                     row.update(events=max(ev, 1), feasible=True)
         rows.append(row)
@@ -500,7 +503,7 @@ def build(t: dict) -> dict:
             ttip, _ = tipping(tptp) if tgap is not None and tgap > 0 else (None, None)
             traj_block = {
                 "source": "77hc-ibv8", "period": hai_period or {"start": None, "end": None},
-                "label": f"Current trajectory (proxy: latest HAI and PSI files scored on the FY{fy} distribution)",
+                "label": f"Current direction (estimate: newest CMS infection and safety data, scored against the FY{fy} penalty line)",
                 "measures": [{"key": m, "value": tvals[m], "z": tz[m], "observed": obs.get(m) if m != "psi90" else None,
                               "predicted": pred.get(m) if m != "psi90" else None} for m in MEASURES],
                 "total": ttotal, "gap": tgap, "status": tstatus, "patients_to_prevent": tptp, "tipping_measure": ttip,
@@ -657,8 +660,9 @@ def build_national(hm, detail, t, params, nat, hc_period, hai_period) -> dict:
         h0 = hac.dropna(subset=["hai_start"]).head(1)
         if len(h0):
             r = h0.iloc[0]
-            hac_src_period = f"FY{fy} HAC file; PSI 90 {_date(r['psi90_start'])} to {_date(r['psi90_end'])}, HAI {_date(r['hai_start'])} to {_date(r['hai_end'])}"
-    hac_src_period = hac_src_period or f"FY{fy} HAC Reduction Program file"
+            hac_src_period = (f"FY{fy} penalty file. Safety events {human_period(r['psi90_start'], r['psi90_end'])}; "
+                              f"infections {human_period(r['hai_start'], r['hai_end'])}")
+    hac_src_period = hac_src_period or f"FY{fy} penalty file"
 
     scored = hm[hm["hac_total"].notna()].copy()
     n_scored = len(scored)
@@ -719,66 +723,75 @@ def build_national(hm, detail, t, params, nat, hc_period, hai_period) -> dict:
         r = float(np.corrcoef(sc["nurse_comm_top_box"].astype(float), sc["hac_total"].astype(float))[0, 1])
         corr = {"r": r, "n": int(len(sc)), "method": "pearson"}
 
-    hc_period_txt = f"{_date(hc_period['start'])} to {_date(hc_period['end'])}" if hc_period else "current HCAHPS file"
-    hai_period_txt = f"{_date(hai_period['start'])} to {_date(hai_period['end'])}" if hai_period else "current HAI file"
+    hc_period_txt = human_period(hc_period["start"], hc_period["end"]) if hc_period else "newest patient survey file"
+    hai_period_txt = human_period(hai_period["start"], hai_period["end"]) if hai_period else "newest infections file"
+    src_hac = "CMS Hospital Acquired Condition Reduction Program (yq43-i98g)"
+    src_hai = "CMS Healthcare Associated Infections (77hc-ibv8)"
+    src_hc = "CMS Patient Survey, HCAHPS (dgck-syfz)"
 
     insights = []
     insights.append({
         "id": "hac_penalized",
-        "title": f"Hospitals receiving the FY{fy} HAC payment reduction",
+        "title": f"About 1 in {round(official_eligible / official_yes)} hospitals lose 1% of their Medicare payments in FY{fy}",
         "value": f"{official_yes:,} ({official_yes / official_eligible * 100:.1f}%)",
-        "detail": f"{official_yes:,} of {official_eligible:,} hospitals with a payment determination are flagged for the 1% "
-                  f"reduction; {official_yes - len(yes_no_score):,} of them have a published Total HAC Score"
-                  + (f" (CCN {', '.join(yes_no_score['ccn'])} is flagged without a published score)" if len(yes_no_score) else "")
-                  + (f"; {len(yes_unprofiled)} scored, flagged hospitals are absent from Hospital General Information, so "
-                     f"CareSignal profiles {official_yes - len(yes_no_score) - len(yes_unprofiled):,} penalized hospitals"
+        "detail": f"CMS made a penalty decision for {official_eligible:,} hospitals and penalized {official_yes:,} of them. "
+                  f"{official_yes - len(yes_no_score):,} of those have a published safety score"
+                  + (f" (hospital {', '.join(yes_no_score['ccn'])} is penalized without a published score)" if len(yes_no_score) else "")
+                  + (f". {len(yes_unprofiled)} penalized hospitals are missing from the CMS hospital list, so "
+                     f"CareSignal shows {official_yes - len(yes_no_score) - len(yes_unprofiled):,} penalized hospitals"
                      if len(yes_unprofiled) else "")
-                  + f". {n_exempt} Maryland hospitals are scored but waived. Cutoff: Total HAC Score above {cutoff:.5f}.",
-        "source": "yq43-i98g", "period": hac_src_period,
+                  + f". {n_exempt} Maryland hospitals get a score but are exempt from the penalty. "
+                    f"The penalty line is a safety score above {cutoff:.5f}.",
+        "source": src_hac, "period": hac_src_period,
     })
     ns = {r["category"]: r["share"] for r in nursing_share}
     insights.append({
         "id": "nursing_share",
-        "title": "Share of penalized hospitals' adverse HAC points from nursing-driven measures",
+        "title": f"Nursing driven infections make up {ns['nursing'] * 100:.0f}% of what pushes penalized hospitals over the line",
         "value": f"{ns['nursing'] * 100:.1f}%",
-        "detail": f"Among penalized hospitals, {ns['nursing'] * 100:.1f}% of above-average weighted z-score points come from CLABSI and CAUTI "
-                  f"(nursing-driven), {ns['shared'] * 100:.1f}% from shared measures and {ns['other'] * 100:.1f}% from SSI. "
-                  "PSI 90 is counted as shared because its nursing-sensitive components (PSI 03, PSI 08) cannot be split out of the published composite.",
-        "source": "yq43-i98g", "period": hac_src_period,
+        "detail": f"At penalized hospitals, {ns['nursing'] * 100:.1f}% of the points above average come from central line and "
+                  f"catheter infections, which nursing drives. Shared measures add {ns['shared'] * 100:.1f}% and surgical site "
+                  f"infections add {ns['other'] * 100:.1f}%. Patient safety events (PSI 90) count as shared because the public "
+                  "data cannot separate out the parts nursing drives (pressure injuries and falls).",
+        "source": src_hac, "period": hac_src_period,
     })
     insights.append({
         "id": "penalized_within_two",
-        "title": "Penalized hospitals within 2 infections of clearing the cutoff",
+        "title": f"{pen_le2:,} penalized hospitals are 2 or fewer infections away from getting clear",
         "value": f"{pen_le2:,} of {len(pen):,}",
-        "detail": f"{pen_le2:,} penalized hospitals would fall to or below the cutoff with 2 or fewer prevented infections in a single measure, "
-                  "holding peers and the cutoff constant. Predicted counts come from the current HAI file (proxy).",
-        "source": "yq43-i98g + 77hc-ibv8", "period": f"{hac_src_period}; predicted counts {hai_period_txt}",
+        "detail": f"Preventing 2 or fewer infections of a single type would bring {pen_le2:,} penalized hospitals to or below "
+                  "the penalty line, if other hospitals and the line stayed the same. Expected infection counts come from the "
+                  "newer CMS infections file, so this is an estimate.",
+        "source": f"{src_hac} and {src_hai}", "period": f"{hac_src_period}. Expected infections {hai_period_txt}",
     })
     insights.append({
         "id": "clear_within_two",
-        "title": "Clear hospitals within 2 infections of crossing the cutoff",
+        "title": f"{clear_le2:,} hospitals below the line could cross it with just {near_band} more infections",
         "value": f"{clear_le2:,}",
-        "detail": f"{clear_le2:,} hospitals below the cutoff would cross it with {near_band} or fewer additional infections in one measure.",
-        "source": "yq43-i98g + 77hc-ibv8", "period": f"{hac_src_period}; predicted counts {hai_period_txt}",
+        "detail": f"{clear_le2:,} hospitals below the penalty line would cross it with {near_band} or fewer extra infections "
+                  "of a single type. Where only a few infections are expected, one more case moves the score a lot.",
+        "source": f"{src_hac} and {src_hai}", "period": f"{hac_src_period}. Expected infections {hai_period_txt}",
     })
     if len(tip_counts):
         top_m, top_n = tip_counts.index[0], int(tip_counts.iloc[0])
         insights.append({
             "id": "top_tipping",
-            "title": "Most common tipping measure",
+            "title": f"{HAC_LABELS[top_m]} are most often the quickest way to get clear",
             "value": HAC_LABELS[top_m],
-            "detail": f"For {top_n:,} of {int(tip_counts.sum()):,} penalized hospitals with a computable tipping measure, {HAC_LABELS[top_m]} "
-                      "is the measure needing the fewest prevented infections to clear the cutoff.",
-            "source": "yq43-i98g + 77hc-ibv8", "period": f"{hac_src_period}; predicted counts {hai_period_txt}",
+            "detail": f"For {top_n:,} of {int(tip_counts.sum()):,} penalized hospitals where this can be worked out, "
+                      f"preventing {HAC_LABELS[top_m][0].lower() + HAC_LABELS[top_m][1:]} takes the fewest infections to get below the penalty line.",
+            "source": f"{src_hac} and {src_hai}", "period": f"{hac_src_period}. Expected infections {hai_period_txt}",
         })
     if corr:
         insights.append({
             "id": "nurse_comm_corr",
-            "title": "Nurse communication vs Total HAC Score",
-            "value": f"r = {corr['r']:.2f}",
-            "detail": f"Pearson correlation across {corr['n']:,} hospitals between HCAHPS nurse communication top-box and Total HAC Score. "
-                      "This is a correlation, not causation, and the two files cover different periods.",
-            "source": "dgck-syfz + yq43-i98g", "period": f"HCAHPS {hc_period_txt}; {hac_src_period}",
+            "title": "Nurse communication scores and safety scores are barely linked" if abs(corr["r"]) < 0.1
+                     else "Nurse communication scores and safety scores move together",
+            "value": f"r = {corr['r']:.2f}".replace("-", "\u2212"),
+            "detail": f"Across {corr['n']:,} hospitals, we compared how often patients said nurses always communicated well "
+                      "with each hospital's safety score. A value near 0 means little connection. This shows a pattern, not "
+                      "a cause, and the two files cover different time periods.",
+            "source": f"{src_hc} and {src_hac}", "period": f"Patient survey {hc_period_txt}. {hac_src_period}",
         })
     if by_peer:
         big = [r for r in by_peer if r["n"] >= 30]
@@ -786,10 +799,10 @@ def build_national(hm, detail, t, params, nat, hc_period, hai_period) -> dict:
             top = big[0]
             insights.append({
                 "id": "peer_highest",
-                "title": "Peer group with the highest penalty rate (≥30 hospitals)",
+                "title": "Group of similar hospitals with the highest penalty rate (30 or more hospitals)",
                 "value": f"{top['pct']:.1f}%",
-                "detail": f"{top['label']}: {top['penalized']} of {top['n']} hospitals penalized.",
-                "source": "yq43-i98g + cost report", "period": hac_src_period,
+                "detail": f"{top['label'][0].upper() + top['label'][1:]}: {top['penalized']} of {top['n']} hospitals penalized.",
+                "source": f"{src_hac} and CMS Hospital Provider Cost Report", "period": hac_src_period,
             })
 
     return {

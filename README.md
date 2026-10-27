@@ -55,23 +55,23 @@ There are no servers, API keys or runtime costs. Every number on the site traces
 ## Key national findings
 
 <!-- FINDINGS:START -->
-_Computed by the pipeline from public CMS files (build 2026-10-26). Each finding lists the source dataset and its reporting period._
+_Worked out by the pipeline from public CMS files (built 2026-10-27). Each finding names its source file and time period._
 
-- **2,917** of 5,419 facilities have a FY2026 Total HAC Score; cutoff = **0.37955** (`yq43-i98g`).
-- **Hospitals receiving the FY2026 HAC payment reduction: 719 (23.9%).** 719 of 3,012 hospitals with a payment determination are flagged for the 1% reduction; 718 of them have a published Total HAC Score (CCN 440218 is flagged without a published score); 2 scored, flagged hospitals are absent from Hospital General Information, so CareSignal profiles 716 penalized hospitals. 43 Maryland hospitals are scored but waived. Cutoff: Total HAC Score above 0.37955.  
-  <sub>Source: `yq43-i98g` · FY2026 HAC file; PSI 90 2022-07-01 to 2024-06-30, HAI 2023-01-01 to 2024-12-31</sub>
-- **Share of penalized hospitals' adverse HAC points from nursing-driven measures: 27.0%.** Among penalized hospitals, 27.0% of above-average weighted z-score points come from CLABSI and CAUTI (nursing-driven), 55.7% from shared measures and 17.3% from SSI. PSI 90 is counted as shared because its nursing-sensitive components (PSI 03, PSI 08) cannot be split out of the published composite.  
-  <sub>Source: `yq43-i98g` · FY2026 HAC file; PSI 90 2022-07-01 to 2024-06-30, HAI 2023-01-01 to 2024-12-31</sub>
-- **Penalized hospitals within 2 infections of clearing the cutoff: 404 of 716.** 404 penalized hospitals would fall to or below the cutoff with 2 or fewer prevented infections in a single measure, holding peers and the cutoff constant. Predicted counts come from the current HAI file (proxy).  
-  <sub>Source: `yq43-i98g + 77hc-ibv8` · FY2026 HAC file; PSI 90 2022-07-01 to 2024-06-30, HAI 2023-01-01 to 2024-12-31; predicted counts 2024-10-01 to 2025-09-30</sub>
-- **Clear hospitals within 2 infections of crossing the cutoff: 795.** 795 hospitals below the cutoff would cross it with 2 or fewer additional infections in one measure.  
-  <sub>Source: `yq43-i98g + 77hc-ibv8` · FY2026 HAC file; PSI 90 2022-07-01 to 2024-06-30, HAI 2023-01-01 to 2024-12-31; predicted counts 2024-10-01 to 2025-09-30</sub>
-- **Most common tipping measure: CAUTI.** For 193 of 581 penalized hospitals with a computable tipping measure, CAUTI is the measure needing the fewest prevented infections to clear the cutoff.  
-  <sub>Source: `yq43-i98g + 77hc-ibv8` · FY2026 HAC file; PSI 90 2022-07-01 to 2024-06-30, HAI 2023-01-01 to 2024-12-31; predicted counts 2024-10-01 to 2025-09-30</sub>
-- **Nurse communication vs Total HAC Score: r = -0.07.** Pearson correlation across 2,836 hospitals between HCAHPS nurse communication top-box and Total HAC Score. This is a correlation, not causation, and the two files cover different periods.  
-  <sub>Source: `dgck-syfz + yq43-i98g` · HCAHPS 2024-10-01 to 2025-09-30; FY2026 HAC file; PSI 90 2022-07-01 to 2024-06-30, HAI 2023-01-01 to 2024-12-31</sub>
-- **Peer group with the highest penalty rate (≥30 hospitals): 44.7%.** 100–299 beds · Major teaching · Urban · Midwest: 17 of 38 hospitals penalized.  
-  <sub>Source: `yq43-i98g + cost report` · FY2026 HAC file; PSI 90 2022-07-01 to 2024-06-30, HAI 2023-01-01 to 2024-12-31</sub>
+- **2,917** of 5,419 hospitals have a FY2026 safety score (Total HAC Score). The penalty line is a score above **0.37955** (`yq43-i98g`).
+- **About 1 in 4 hospitals lose 1% of their Medicare payments in FY2026** (719 (23.9%)). CMS made a penalty decision for 3,012 hospitals and penalized 719 of them. 718 of those have a published safety score (hospital 440218 is penalized without a published score). 2 penalized hospitals are missing from the CMS hospital list, so CareSignal shows 716 penalized hospitals. 43 Maryland hospitals get a score but are exempt from the penalty. The penalty line is a safety score above 0.37955.  
+  <sub>Source: CMS Hospital Acquired Condition Reduction Program (yq43-i98g). FY2026 penalty file. Safety events Jul 1, 2022 to Jun 30, 2024; infections Jan 1, 2023 to Dec 31, 2024</sub>
+- **Nursing driven infections make up 27% of what pushes penalized hospitals over the line** (27.0%). At penalized hospitals, 27.0% of the points above average come from central line and catheter infections, which nursing drives. Shared measures add 55.7% and surgical site infections add 17.3%. Patient safety events (PSI 90) count as shared because the public data cannot separate out the parts nursing drives (pressure injuries and falls).  
+  <sub>Source: CMS Hospital Acquired Condition Reduction Program (yq43-i98g). FY2026 penalty file. Safety events Jul 1, 2022 to Jun 30, 2024; infections Jan 1, 2023 to Dec 31, 2024</sub>
+- **404 penalized hospitals are 2 or fewer infections away from getting clear** (404 of 716). Preventing 2 or fewer infections of a single type would bring 404 penalized hospitals to or below the penalty line, if other hospitals and the line stayed the same. Expected infection counts come from the newer CMS infections file, so this is an estimate.  
+  <sub>Source: CMS Hospital Acquired Condition Reduction Program (yq43-i98g) and CMS Healthcare Associated Infections (77hc-ibv8). FY2026 penalty file. Safety events Jul 1, 2022 to Jun 30, 2024; infections Jan 1, 2023 to Dec 31, 2024. Expected infections Oct 1, 2024 to Sep 30, 2025</sub>
+- **795 hospitals below the line could cross it with just 2 more infections** (795). 795 hospitals below the penalty line would cross it with 2 or fewer extra infections of a single type. Where only a few infections are expected, one more case moves the score a lot.  
+  <sub>Source: CMS Hospital Acquired Condition Reduction Program (yq43-i98g) and CMS Healthcare Associated Infections (77hc-ibv8). FY2026 penalty file. Safety events Jul 1, 2022 to Jun 30, 2024; infections Jan 1, 2023 to Dec 31, 2024. Expected infections Oct 1, 2024 to Sep 30, 2025</sub>
+- **Catheter infections (CAUTI) are most often the quickest way to get clear** (Catheter infections (CAUTI)). For 193 of 581 penalized hospitals where this can be worked out, preventing catheter infections (CAUTI) takes the fewest infections to get below the penalty line.  
+  <sub>Source: CMS Hospital Acquired Condition Reduction Program (yq43-i98g) and CMS Healthcare Associated Infections (77hc-ibv8). FY2026 penalty file. Safety events Jul 1, 2022 to Jun 30, 2024; infections Jan 1, 2023 to Dec 31, 2024. Expected infections Oct 1, 2024 to Sep 30, 2025</sub>
+- **Nurse communication scores and safety scores are barely linked** (r = −0.07). Across 2,836 hospitals, we compared how often patients said nurses always communicated well with each hospital's safety score. A value near 0 means little connection. This shows a pattern, not a cause, and the two files cover different time periods.  
+  <sub>Source: CMS Patient Survey, HCAHPS (dgck-syfz) and CMS Hospital Acquired Condition Reduction Program (yq43-i98g). Patient survey Oct 1, 2024 to Sep 30, 2025. FY2026 penalty file. Safety events Jul 1, 2022 to Jun 30, 2024; infections Jan 1, 2023 to Dec 31, 2024</sub>
+- **Group of similar hospitals with the highest penalty rate (30 or more hospitals)** (44.7%). 100 to 299 beds, major teaching, urban, Midwest: 17 of 38 hospitals penalized.  
+  <sub>Source: CMS Hospital Acquired Condition Reduction Program (yq43-i98g) and CMS Hospital Provider Cost Report. FY2026 penalty file. Safety events Jul 1, 2022 to Jun 30, 2024; infections Jan 1, 2023 to Dec 31, 2024</sub>
 <!-- FINDINGS:END -->
 
 ## Methodology

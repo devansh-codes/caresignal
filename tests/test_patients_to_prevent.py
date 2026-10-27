@@ -37,20 +37,20 @@ def test_floor_makes_measure_infeasible():
     # gap 1.0 -> dz 2 -> target 0.2 - 1.0 < floor 0
     rows = patients_to_prevent({"cauti": 0.2, "cdi": 1.0}, W, {"cauti": 12.0, "cdi": 30.0}, P, 1.0)
     r = _row(rows, "cauti")
-    assert not r["feasible"] and r["events"] is None and "floor" in r["reason"]
+    assert not r["feasible"] and r["events"] is None and "best possible score" in r["reason"]
 
 
 def test_missing_measure_and_missing_predicted():
     rows = patients_to_prevent({"cauti": 1.5, "cdi": 1.0}, W, {"cauti": None, "cdi": 30.0}, P, 0.2)
-    assert "predicted" in _row(rows, "cauti")["reason"]
-    assert _row(rows, "mrsa")["reason"] == "No result for this measure"
+    assert "expected infection count" in _row(rows, "cauti")["reason"]
+    assert _row(rows, "mrsa")["reason"] == "CMS reported no result for this measure"
 
 
 def test_psi90_never_has_event_count():
     w = {**W, "psi90": 1 / 3, "cauti": 1 / 3, "cdi": 1 / 3}
     rows = patients_to_prevent({"psi90": 1.2, "cauti": 1.5, "cdi": 1.0}, w, {"cauti": 12.0}, P, 0.1)
     r = _row(rows, "psi90")
-    assert not r["feasible"] and r["events"] is None and r["delta_sir"] > 0 and "composite" in r["reason"]
+    assert not r["feasible"] and r["events"] is None and r["delta_sir"] > 0 and "combined rate" in r["reason"]
 
 
 def test_already_clear():

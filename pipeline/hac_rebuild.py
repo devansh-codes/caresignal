@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from pipeline import hac_core as hc
+from pipeline.plain_text import plain_tree
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data/raw/yq43-i98g.csv"
@@ -323,7 +324,7 @@ def build() -> dict:
         p.parent.mkdir(parents=True, exist_ok=True)
     result.to_parquet(OUT_PARQUET, index=False)
     OUT_PARAMS.write_text(json.dumps(params, indent=2))
-    OUT_ACCURACY.write_text(json.dumps(accuracy, indent=2))
+    OUT_ACCURACY.write_text(json.dumps(plain_tree(accuracy), indent=2, ensure_ascii=False))  # no dashes in visible text
     return accuracy
 
 

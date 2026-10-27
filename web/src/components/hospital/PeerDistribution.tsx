@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import type { EChartsOption } from 'echarts'
-import { Card, SourceNote, StateView } from '../ui'
+import { StateView } from '../ui'
+import { plain } from './helpers'
 import { Chart } from '../charts/Chart'
 import { baseOption } from '../charts/theme'
 import { fmt, token } from '../../lib/format'
@@ -12,28 +12,28 @@ interface MetricDef { id: string; label: string; higherBetter: boolean; digits: 
 const GROUPS: { id: string; label: string; metrics: MetricDef[] }[] = [
   {
     id: 'hac',
-    label: 'HAC measures',
+    label: 'Safety score',
     metrics: [
-      { id: 'hac_total', label: 'Total HAC Score', higherBetter: false, digits: 3 },
-      { id: 'cauti_value', label: 'CAUTI SIR', higherBetter: false, digits: 3 },
-      { id: 'clabsi_value', label: 'CLABSI SIR', higherBetter: false, digits: 3 },
-      { id: 'cdi_value', label: 'CDI SIR', higherBetter: false, digits: 3 },
-      { id: 'mrsa_value', label: 'MRSA SIR', higherBetter: false, digits: 3 },
-      { id: 'ssi_value', label: 'SSI SIR', higherBetter: false, digits: 3 },
-      { id: 'psi90_value', label: 'PSI 90 composite', higherBetter: false, digits: 3 },
+      { id: 'hac_total', label: 'Safety score', higherBetter: false, digits: 2 },
+      { id: 'cauti_value', label: 'Catheter infections (rate vs expected)', higherBetter: false, digits: 2 },
+      { id: 'clabsi_value', label: 'Central line infections (rate vs expected)', higherBetter: false, digits: 2 },
+      { id: 'cdi_value', label: 'C. diff infections (rate vs expected)', higherBetter: false, digits: 2 },
+      { id: 'mrsa_value', label: 'MRSA bloodstream infections (rate vs expected)', higherBetter: false, digits: 2 },
+      { id: 'ssi_value', label: 'Surgical site infections (rate vs expected)', higherBetter: false, digits: 2 },
+      { id: 'psi90_value', label: 'Patient safety events (combined rate)', higherBetter: false, digits: 3 },
     ],
   },
   {
     id: 'experience',
-    label: 'Experience & readmissions',
+    label: 'Patient experience and readmissions',
     metrics: [
-      { id: 'nurse_comm', label: 'Nurse communication (top-box %)', higherBetter: true, digits: 0 },
-      { id: 'discharge_info', label: 'Discharge information (yes %)', higherBetter: true, digits: 0 },
-      { id: 'hcahps_star', label: 'HCAHPS summary star', higherBetter: true, digits: 0 },
-      { id: 'err_hf', label: 'Heart failure ERR', higherBetter: false, digits: 3 },
-      { id: 'err_pn', label: 'Pneumonia ERR', higherBetter: false, digits: 3 },
-      { id: 'err_copd', label: 'COPD ERR', higherBetter: false, digits: 3 },
-      { id: 'err_ami', label: 'AMI ERR', higherBetter: false, digits: 3 },
+      { id: 'nurse_comm', label: 'Nurse communication (% always)', higherBetter: true, digits: 0 },
+      { id: 'discharge_info', label: 'Discharge information (% yes)', higherBetter: true, digits: 0 },
+      { id: 'hcahps_star', label: 'Survey star rating', higherBetter: true, digits: 0 },
+      { id: 'err_hf', label: 'Heart failure readmission ratio', higherBetter: false, digits: 2 },
+      { id: 'err_pn', label: 'Pneumonia readmission ratio', higherBetter: false, digits: 2 },
+      { id: 'err_copd', label: 'COPD readmission ratio', higherBetter: false, digits: 2 },
+      { id: 'err_ami', label: 'Heart attack readmission ratio', higherBetter: false, digits: 2 },
     ],
   },
 ]
@@ -64,7 +64,7 @@ function Strip({ peer, idx, m }: { peer: PeerFile; idx: number; m: MetricDef }) 
     yAxis: { type: 'value', min: -0.6, max: 0.6, show: false },
     tooltip: { ...(b.tooltip as object), trigger: 'item', formatter: (p: unknown) => {
       const d = (p as { data: (number | string)[]; seriesName: string }).data
-      return `${(p as { seriesName: string }).seriesName === 'This hospital' ? '<b>This hospital</b>' : `Peer CCN ${d[2]}`}<br/>${m.label}: ${fmt(d[0] as number, m.digits)}`
+      return `${(p as { seriesName: string }).seriesName === 'This hospital' ? '<b>This hospital</b>' : 'A similar hospital'}<br/>${m.label}: ${fmt(d[0] as number, m.digits)}`
     } },
     series: [
       {
@@ -72,60 +72,50 @@ function Strip({ peer, idx, m }: { peer: PeerFile; idx: number; m: MetricDef }) 
         name: 'Peers',
         data: pts,
         symbolSize: 6,
-        itemStyle: { color: token('cat-other', 0.45) },
-        markLine: med == null ? undefined : { silent: true, symbol: 'none', data: [{ xAxis: med }], lineStyle: { color: token('ink'), width: 1.5, type: 'solid' }, label: { formatter: `Median ${fmt(med, m.digits)}`, position: 'end', color: token('muted'), fontSize: 10 } },
+        itemStyle: { color: 'rgba(88,144,168,0.45)' },
+        markLine: med == null ? undefined : { silent: true, symbol: 'none', data: [{ xAxis: med }], lineStyle: { color: token('ink'), width: 1.5, type: 'solid' }, label: { formatter: `Middle ${fmt(med, m.digits)}`, position: 'end', color: token('muted'), fontSize: 10 } },
       },
       ...(self == null
         ? []
-        : [{ type: 'scatter' as const, name: 'This hospital', data: [[self, 0, 'self']], symbolSize: 14, z: 5, itemStyle: { color: token('primary'), borderColor: token('surface'), borderWidth: 2 } }]),
+        : [{ type: 'scatter' as const, name: 'This hospital', data: [[self, 0, 'self']], symbolSize: 14, z: 5, itemStyle: { color: '#112659', borderColor: '#FFFFFF', borderWidth: 2 } }]),
     ],
   }
   return (
     <div className="border-b border-border/60 py-2 last:border-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-        <span className="font-medium text-ink">{m.label}</span>
+        <span className="font-semibold text-ink">{m.label}</span>
         <span className="tabular text-xs text-muted">
-          {self == null ? 'Not reported for this hospital' : <>This hospital <strong className="text-ink">{fmt(self, m.digits)}</strong> · {pct == null ? 'no peer comparison' : `better than ${Math.round(pct)}% of peers`} ({m.higherBetter ? 'higher' : 'lower'} is better)</>}
+          {self == null ? 'Not reported for this hospital' : <>This hospital <strong className="text-ink">{fmt(self, m.digits)}</strong> · {pct == null ? 'no comparison available' : `better than ${Math.round(pct)}% of similar hospitals`} ({m.higherBetter ? 'higher' : 'lower'} is better)</>}
         </span>
       </div>
-      {all.length ? <Chart option={option} height={72} ariaLabel={`${m.label}: this hospital ${fmt(self, m.digits)} versus ${all.length} peers, median ${fmt(med, m.digits)}.`} /> : <p className="py-2 text-xs text-muted">No peer values.</p>}
+      {all.length ? <Chart option={option} height={72} ariaLabel={`${m.label}: this hospital ${fmt(self, m.digits)} compared with ${all.length} similar hospitals, middle value ${fmt(med, m.digits)}.`} /> : <p className="py-2 text-xs text-muted">No values from similar hospitals.</p>}
     </div>
   )
 }
 
-export default function PeerDistribution({ h, peers }: { h: Hospital; peers: AsyncState<PeerFile> | null }) {
-  const [group, setGroup] = useState(GROUPS[0].id)
-  const g = GROUPS.find((x) => x.id === group)!
+/** Dot strips: every similar hospital as a light dot, this hospital in navy, the middle value as a line. */
+export default function PeerDistribution({ h, peers, groupId }: { h: Hospital; peers: AsyncState<PeerFile> | null; groupId: 'hac' | 'experience' }) {
+  const g = GROUPS.find((x) => x.id === groupId)!
   return (
-    <Card
-      title="Peer benchmark"
-      subtitle={h.peer ? `Compared with ${h.peer.n} hospitals in “${h.peer.label}”. Peers are anonymous; this view never names competitors.` : 'No peer group assigned.'}
-      action={
-        <div role="tablist" aria-label="Peer metric group" className="no-print inline-flex rounded-md bg-surface-2 p-0.5">
-          {GROUPS.map((x) => (
-            <button key={x.id} role="tab" aria-selected={group === x.id} type="button" onClick={() => setGroup(x.id)}
-              className={`rounded px-2.5 py-1 text-xs font-semibold ${group === x.id ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}>
-              {x.label}
-            </button>
-          ))}
-        </div>
-      }
-    >
-      <ul className="mb-1 flex gap-4 text-xs text-muted" aria-label="Legend">
-        <li className="inline-flex items-center gap-1.5"><span aria-hidden className="h-3 w-3 rounded-full bg-primary ring-2 ring-surface" />This hospital</li>
-        <li className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-other/50" />Peer hospital</li>
-        <li className="inline-flex items-center gap-1.5"><span aria-hidden className="h-3 w-0.5 bg-ink" />Peer median</li>
+    <div>
+      <p className="mb-3 text-[15px] text-muted">
+        {h.peer
+          ? `Each light dot is one of ${h.peer.n} similar hospitals (${plain(h.peer.label)}). Hospitals are never named. The navy dot is this hospital.`
+          : 'This hospital has no group of similar hospitals, because its size data is not available.'}
+      </p>
+      <ul className="mb-1 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink" aria-label="Chart key">
+        <li className="inline-flex items-center gap-2"><span aria-hidden className="h-3.5 w-3.5 rounded-full bg-[#112659]" />This hospital</li>
+        <li className="inline-flex items-center gap-2"><span aria-hidden className="h-2.5 w-2.5 rounded-full bg-[#5890A8]/50" />A similar hospital</li>
+        <li className="inline-flex items-center gap-2"><span aria-hidden className="h-4 w-0.5 bg-ink" />Middle value</li>
       </ul>
-      {!h.peer || !peers ? (
-        <StateView kind="empty" message="This hospital has no cost-report match, so no peer group can be formed." />
-      ) : peers.status === 'loading' ? (
+      {!h.peer || !peers ? null : peers.status === 'loading' ? (
         <StateView kind="loading" />
       ) : peers.status === 'error' ? (
-        <StateView kind="error" message={`Peer data could not be loaded (${peers.error}).`} />
+        <StateView kind="error" message="Similar hospital data could not be loaded. Please try again later." />
       ) : (
         <div>{g.metrics.map((m) => <Strip key={m.id} peer={peers.data} idx={peers.data.hospitals.indexOf(h.ccn)} m={m} />)}</div>
       )}
-      <SourceNote>Peer rules: bed size × teaching intensity × urban/rural × Census region (CMS Hospital Provider Cost Report), with a minimum of 15 HAC-scored hospitals · measures from yq43-i98g, dgck-syfz, 9n3s-kdb3</SourceNote>
-    </Card>
+      <p className="mt-4 text-xs text-muted">Source: similar hospitals are grouped by number of beds, teaching status, city or rural location and region of the country (CMS Hospital Cost Report). Measures from the CMS safety, patient survey and readmission files.</p>
+    </div>
   )
 }

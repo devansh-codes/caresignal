@@ -2,361 +2,363 @@
 # category: nursing = nursing practice is the primary lever; shared = nursing is one of several
 # accountable teams; other = primarily surgical/medical-staff driven.
 # These are an informed judgment, documented here and shown as UI tooltips.
+# Visible text (label, program, rationale, footnotes) follows docs/STYLE_GUIDE.md: plain words, no dashes.
 
 measures:
   # ---------------- HAC Reduction Program (FY2026) ----------------
   - id: psi90
-    label: PSI 90 Patient Safety and Adverse Events Composite
-    program: HAC
+    label: Patient safety events (PSI 90)
+    program: Hospital Acquired Condition Reduction Program
     category: shared
     direction: lower_better
     source: yq43-i98g
     rationale: >-
-      Weighted composite of 10 claims-based safety indicators. Two components (pressure ulcer, PSI 03,
-      and in-hospital fall with hip fracture, PSI 08) are classic nursing-sensitive outcomes; the rest are
-      largely surgical, so the composite is shared.
+      A combined score built from 10 safety events found in Medicare billing records. Two of them,
+      pressure injuries (PSI 03) and falls that break a hip (PSI 08), depend heavily on nursing care.
+      Most of the rest relate to surgery, so this measure is shared.
   - id: clabsi
-    label: Central line-associated bloodstream infection (CLABSI)
-    program: HAC
+    label: Central line infections (CLABSI)
+    program: Hospital Acquired Condition Reduction Program
     category: nursing
     direction: lower_better
     source: yq43-i98g
     rationale: >-
-      Prevented chiefly by bedside line-maintenance bundles (hub scrubbing, dressing integrity, daily
-      necessity review) that nurses perform and audit.
+      Prevented mainly by daily line care at the bedside: scrubbing the line hub, keeping dressings clean
+      and dry, and asking every day whether the line is still needed. Nurses do and check this work.
   - id: cauti
-    label: Catheter-associated urinary tract infection (CAUTI)
-    program: HAC
+    label: Catheter infections (CAUTI)
+    program: Hospital Acquired Condition Reduction Program
     category: nursing
     direction: lower_better
     source: yq43-i98g
     rationale: >-
-      Driven by catheter insertion technique, maintenance and nurse-driven removal protocols, which are
-      among the most established nursing-sensitive quality indicators.
+      Depends on how urinary catheters are inserted, cared for and removed. Protocols that let nurses
+      remove catheters as soon as they are no longer needed are among the best known nursing quality practices.
   - id: ssi
-    label: Surgical site infection (colon and abdominal hysterectomy)
-    program: HAC
+    label: Surgical site infections (SSI, colon surgery and hysterectomy)
+    program: Hospital Acquired Condition Reduction Program
     category: other
     direction: lower_better
     source: yq43-i98g
     rationale: >-
-      Determined mostly by perioperative practice (antibiotic timing, skin prep, normothermia, surgical
-      technique), with nursing contributing to post-operative wound care.
+      Driven mostly by care around the operation: antibiotic timing, skin preparation, keeping patients
+      warm and surgical technique. Nurses contribute through wound care after surgery.
   - id: cdi
-    label: Clostridioides difficile infection (CDI)
-    program: HAC
+    label: C. diff infections (CDI)
+    program: Hospital Acquired Condition Reduction Program
     category: shared
     direction: lower_better
     source: yq43-i98g
     rationale: >-
-      Depends on antimicrobial stewardship, environmental cleaning and testing practice as well as
-      nursing contact precautions and hand hygiene.
+      Depends on careful antibiotic use, room cleaning and testing practices, together with nursing
+      isolation precautions and hand hygiene.
   - id: mrsa
-    label: MRSA bacteremia
-    program: HAC
+    label: MRSA bloodstream infections
+    program: Hospital Acquired Condition Reduction Program
     category: shared
     direction: lower_better
     source: yq43-i98g
     rationale: >-
-      Prevented through hand hygiene, line care and decolonization programs owned jointly by nursing,
-      infection prevention and environmental services.
+      Prevented through hand hygiene, line care and programs that clear MRSA from patients' skin. Nursing,
+      infection prevention and environmental services share this work.
 
-  # ---------------- Healthcare-Associated Infections (current file) ----------------
+  # ---------------- Healthcare Associated Infections (current file) ----------------
   - id: HAI_1
-    label: CLABSI SIR
-    program: HAI
+    label: Central line infections (CLABSI)
+    program: Healthcare Associated Infections
     category: nursing
     direction: lower_better
     source: 77hc-ibv8
-    rationale: Same rationale as the HAC CLABSI measure; standardized infection ratio from NHSN.
+    rationale: Same reasoning as the central line measure in the penalty program. The value compares actual infections with the number expected.
   - id: HAI_2
-    label: CAUTI SIR
-    program: HAI
+    label: Catheter infections (CAUTI)
+    program: Healthcare Associated Infections
     category: nursing
     direction: lower_better
     source: 77hc-ibv8
-    rationale: Same rationale as the HAC CAUTI measure; standardized infection ratio from NHSN.
+    rationale: Same reasoning as the catheter measure in the penalty program. The value compares actual infections with the number expected.
   - id: HAI_3
-    label: SSI – colon surgery SIR
-    program: HAI
+    label: Surgical site infections after colon surgery
+    program: Healthcare Associated Infections
     category: other
     direction: lower_better
     source: 77hc-ibv8
-    rationale: Perioperative and surgical-team driven; nursing contributes to wound care.
+    rationale: Driven mainly by the surgical team and care around the operation. Nurses contribute through wound care.
   - id: HAI_4
-    label: SSI – abdominal hysterectomy SIR
-    program: HAI
+    label: Surgical site infections after abdominal hysterectomy
+    program: Healthcare Associated Infections
     category: other
     direction: lower_better
     source: 77hc-ibv8
-    rationale: Perioperative and surgical-team driven; nursing contributes to wound care.
+    rationale: Driven mainly by the surgical team and care around the operation. Nurses contribute through wound care.
   - id: HAI_5
-    label: MRSA bacteremia SIR
-    program: HAI
+    label: MRSA bloodstream infections
+    program: Healthcare Associated Infections
     category: shared
     direction: lower_better
     source: 77hc-ibv8
-    rationale: Shared between nursing, infection prevention and environmental services.
+    rationale: Shared by nursing, infection prevention and environmental services.
   - id: HAI_6
-    label: C. difficile SIR
-    program: HAI
+    label: C. diff infections (CDI)
+    program: Healthcare Associated Infections
     category: shared
     direction: lower_better
     source: 77hc-ibv8
-    rationale: Shared between antimicrobial stewardship, environmental services and nursing precautions.
+    rationale: Shared by the antibiotic stewardship team, environmental services and nursing isolation precautions.
 
   # ---------------- PSI 90 components ----------------
   - id: PSI_03
-    label: Pressure ulcer rate
-    program: PSI
+    label: Pressure injuries (PSI 03)
+    program: Patient safety indicators
     category: nursing
     direction: lower_better
     source: muwa-iene
     rationale: >-
-      Stage 3+ pressure injuries are prevented by repositioning, skin assessment and support surfaces,
-      which are core nursing interventions.
+      Serious pressure injuries (stage 3 or worse) are prevented by turning patients, checking their skin
+      and using the right mattresses. These are core nursing tasks.
   - id: PSI_06
-    label: Iatrogenic pneumothorax rate
-    program: PSI
+    label: Collapsed lung caused by a procedure (PSI 06)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: Procedural complication (central line placement, thoracentesis) driven by proceduralists.
+    rationale: A complication of procedures such as placing a central line. It depends mainly on the clinician doing the procedure.
   - id: PSI_08
-    label: In-hospital fall with hip fracture rate
-    program: PSI
+    label: Falls in the hospital that break a hip (PSI 08)
+    program: Patient safety indicators
     category: nursing
     direction: lower_better
     source: muwa-iene
     rationale: >-
-      Fall-risk assessment, toileting rounds, bed alarms and mobility support are nursing-led fall
-      prevention practices.
+      Fall risk checks, regular toileting rounds, bed alarms and help with walking are fall prevention
+      practices that nurses lead.
   - id: PSI_09
-    label: Postoperative hemorrhage or hematoma rate
-    program: PSI
+    label: Bleeding after surgery (PSI 09)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: Surgical technique and perioperative anticoagulation management.
+    rationale: Depends on surgical technique and how blood thinners are managed around the operation.
   - id: PSI_10
-    label: Postoperative acute kidney injury requiring dialysis rate
-    program: PSI
+    label: Kidney injury needing dialysis after surgery (PSI 10)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: Driven by perioperative hemodynamic, fluid and nephrotoxin management.
+    rationale: Depends on managing blood pressure, fluids and medicines that can harm the kidneys around the operation.
   - id: PSI_11
-    label: Postoperative respiratory failure rate
-    program: PSI
+    label: Breathing failure after surgery (PSI 11)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: Mainly anesthesia and surgical factors; nursing mobility and pulmonary care contribute.
+    rationale: Mainly anesthesia and surgical factors. Nursing help with walking and breathing exercises also matters.
   - id: PSI_12
-    label: Perioperative pulmonary embolism or deep vein thrombosis rate
-    program: PSI
+    label: Blood clots in the lungs or legs around surgery (PSI 12)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: VTE prophylaxis ordering is medical-staff driven; early ambulation is a nursing contribution.
+    rationale: Doctors order the medicine that prevents clots. Getting patients up and walking early is the nursing contribution.
   - id: PSI_13
-    label: Postoperative sepsis rate
-    program: PSI
+    label: Sepsis after surgery (PSI 13)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: Surgical-team driven post-operative complication.
+    rationale: A complication after surgery that depends mainly on the surgical team.
   - id: PSI_14
-    label: Postoperative wound dehiscence rate
-    program: PSI
+    label: Surgical wound reopening (PSI 14)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: Surgical technique and patient factors dominate.
+    rationale: Surgical technique and the patient's own health matter most.
   - id: PSI_15
-    label: Abdominopelvic accidental puncture or laceration rate
-    program: PSI
+    label: Accidental cuts or tears during abdominal surgery (PSI 15)
+    program: Patient safety indicators
     category: other
     direction: lower_better
     source: muwa-iene
-    rationale: Intra-operative surgical complication.
+    rationale: A complication that happens during the operation itself.
   - id: PSI_90
-    label: PSI 90 composite (six-digit estimate)
-    program: PSI
+    label: Patient safety events, combined score (PSI 90)
+    program: Patient safety indicators
     category: shared
     direction: lower_better
     source: muwa-iene
-    rationale: Composite of the components above; includes the nursing-sensitive PSI 03 and PSI 08.
+    rationale: Combines the measures above, including pressure injuries (PSI 03) and falls that break a hip (PSI 08), which depend on nursing care.
 
-  # ---------------- HCAHPS (top-box percentages) ----------------
+  # ---------------- HCAHPS (top box percentages) ----------------
   - id: H_COMP_1_A_P
-    label: Nurse communication ("Always")
-    program: HCAHPS / VBP
+    label: Nurses always communicated well
+    program: Patient survey (HCAHPS), counts toward Value Based Purchasing
     category: nursing
     direction: higher_better
     source: dgck-syfz
     rationale: >-
-      Composite of nurse courtesy/respect, listening and explaining. It is a VBP Person and Community
-      Engagement dimension and is directly owned by nursing.
+      Combines how often nurses were courteous, listened carefully and explained things clearly. It counts
+      toward Medicare's Value Based Purchasing program, and nursing owns it directly.
   - id: H_NURSE_RESPECT_A_P
-    label: Nurses treated patients with courtesy and respect ("Always")
-    program: HCAHPS
+    label: Nurses always treated patients with courtesy and respect
+    program: Patient survey (HCAHPS)
     category: nursing
     direction: higher_better
     source: dgck-syfz
-    rationale: Component of the nurse communication composite.
+    rationale: One part of the nurse communication score.
   - id: H_NURSE_LISTEN_A_P
-    label: Nurses listened carefully ("Always")
-    program: HCAHPS
+    label: Nurses always listened carefully
+    program: Patient survey (HCAHPS)
     category: nursing
     direction: higher_better
     source: dgck-syfz
-    rationale: Component of the nurse communication composite.
+    rationale: One part of the nurse communication score.
   - id: H_NURSE_EXPLAIN_A_P
-    label: Nurses explained things understandably ("Always")
-    program: HCAHPS
+    label: Nurses always explained things clearly
+    program: Patient survey (HCAHPS)
     category: nursing
     direction: higher_better
     source: dgck-syfz
-    rationale: Component of the nurse communication composite.
+    rationale: One part of the nurse communication score.
   - id: H_COMP_6_Y_P
-    label: Discharge information ("Yes")
-    program: HCAHPS / VBP
+    label: Patients got information about going home
+    program: Patient survey (HCAHPS), counts toward Value Based Purchasing
     category: shared
     direction: higher_better
     source: dgck-syfz
     rationale: >-
-      Discharge teaching is delivered largely by nurses alongside case management and physicians; it is
-      a VBP Person and Community Engagement dimension.
+      Nurses deliver most discharge teaching, together with case managers and doctors. It counts toward
+      Medicare's Value Based Purchasing program.
   - id: H_DISCH_HELP_Y_P
-    label: Discussed help needed after discharge ("Yes")
-    program: HCAHPS
+    label: Staff discussed help needed after leaving
+    program: Patient survey (HCAHPS)
     category: shared
     direction: higher_better
     source: dgck-syfz
     rationale: Part of discharge planning shared by nursing and case management.
   - id: H_SYMPTOMS_Y_P
-    label: Told what symptoms to watch for after discharge ("Yes")
-    program: HCAHPS
+    label: Patients were told what symptoms to watch for at home
+    program: Patient survey (HCAHPS)
     category: shared
     direction: higher_better
     source: dgck-syfz
-    rationale: Part of discharge education shared by nursing and the care team.
+    rationale: Part of discharge teaching shared by nursing and the care team.
   - id: H_COMP_5_A_P
-    label: Communication about medicines ("Always")
-    program: HCAHPS / VBP
+    label: Staff always explained new medicines
+    program: Patient survey (HCAHPS), counts toward Value Based Purchasing
     category: shared
     direction: higher_better
     source: dgck-syfz
-    rationale: Medication teaching at administration is a nursing task shared with pharmacy and prescribers.
+    rationale: Nurses explain medicines when they give them, together with pharmacists and prescribers.
   - id: H_COMP_2_A_P
-    label: Doctor communication ("Always")
-    program: HCAHPS / VBP
+    label: Doctors always communicated well
+    program: Patient survey (HCAHPS), counts toward Value Based Purchasing
     category: other
     direction: higher_better
     source: dgck-syfz
-    rationale: Physician-owned communication composite.
+    rationale: Owned mainly by physicians.
   - id: H_QUIET_HSP_A_P
-    label: Quiet at night ("Always")
-    program: HCAHPS
+    label: Area around the room was always quiet at night
+    program: Patient survey (HCAHPS)
     category: shared
     direction: higher_better
     source: dgck-syfz
-    rationale: Influenced by unit routines, night-time care clustering and the physical environment.
+    rationale: Shaped by unit routines, grouping night care together and the building itself.
   - id: H_CLEAN_HSP_A_P
-    label: Room and bathroom clean ("Always")
-    program: HCAHPS
+    label: Room and bathroom were always clean
+    program: Patient survey (HCAHPS)
     category: other
     direction: higher_better
     source: dgck-syfz
-    rationale: Primarily environmental services.
+    rationale: Mainly environmental services.
   - id: H_HSP_RATING_9_10
-    label: Overall hospital rating 9–10
-    program: HCAHPS / VBP
+    label: Patients rated the hospital 9 or 10 out of 10
+    program: Patient survey (HCAHPS), counts toward Value Based Purchasing
     category: shared
     direction: higher_better
     source: dgck-syfz
-    rationale: Global rating reflecting the whole care team.
+    rationale: An overall rating that reflects the whole care team.
   - id: H_RECMND_DY
-    label: Would definitely recommend the hospital
-    program: HCAHPS
+    label: Patients would definitely recommend the hospital
+    program: Patient survey (HCAHPS)
     category: shared
     direction: higher_better
     source: dgck-syfz
-    rationale: Global loyalty measure reflecting the whole care team.
+    rationale: An overall loyalty measure that reflects the whole care team.
 
   # ---------------- HRRP (FY2026) ----------------
   - id: READM-30-AMI-HRRP
-    label: Acute myocardial infarction (AMI) readmissions
-    program: HRRP
+    label: Heart attack readmissions (AMI)
+    program: Hospital Readmissions Reduction Program
     category: shared
     direction: lower_better
     source: 9n3s-kdb3
-    rationale: Discharge education, medication reconciliation and follow-up scheduling are shared care-transition work.
+    rationale: Discharge teaching, checking medicines and booking follow up visits are shared work when patients go home.
   - id: READM-30-HF-HRRP
     label: Heart failure readmissions
-    program: HRRP
+    program: Hospital Readmissions Reduction Program
     category: shared
     direction: lower_better
     source: 9n3s-kdb3
-    rationale: Nurse-led self-care teaching (weights, diet, diuretics) and transitions follow-up are key levers.
+    rationale: Nurses teach patients to manage at home (daily weights, diet, water pills), and follow up after discharge is key.
   - id: READM-30-PN-HRRP
     label: Pneumonia readmissions
-    program: HRRP
+    program: Hospital Readmissions Reduction Program
     category: shared
     direction: lower_better
     source: 9n3s-kdb3
-    rationale: Shared care-transition work across nursing, medicine and case management.
+    rationale: Shared work by nursing, doctors and case management as patients go home.
   - id: READM-30-COPD-HRRP
     label: COPD readmissions
-    program: HRRP
+    program: Hospital Readmissions Reduction Program
     category: shared
     direction: lower_better
     source: 9n3s-kdb3
-    rationale: Inhaler technique teaching and action plans are nursing and respiratory-therapy led.
+    rationale: Teaching inhaler technique and home action plans is led by nurses and respiratory therapists.
   - id: READM-30-CABG-HRRP
-    label: CABG surgery readmissions
-    program: HRRP
+    label: Heart bypass surgery readmissions (CABG)
+    program: Hospital Readmissions Reduction Program
     category: shared
     direction: lower_better
     source: 9n3s-kdb3
-    rationale: Shared surgical and nursing care-transition work.
+    rationale: Shared by the surgical team and nursing as patients go home.
   - id: READM-30-HIP-KNEE-HRRP
-    label: Elective hip/knee replacement readmissions
-    program: HRRP
+    label: Hip or knee replacement readmissions
+    program: Hospital Readmissions Reduction Program
     category: shared
     direction: lower_better
     source: 9n3s-kdb3
-    rationale: Shared orthopedic, nursing and rehabilitation care-transition work.
+    rationale: Shared by orthopedics, nursing and rehabilitation as patients go home.
 
   # ---------------- Timely & Effective Care ----------------
   - id: SEP_1
-    label: Severe sepsis and septic shock management bundle (SEP-1)
-    program: IQR
+    label: Sepsis care bundle (SEP 1)
+    program: Timely and effective care
     category: shared
     direction: higher_better
     source: yv7e-xc69
     rationale: >-
-      Nurse-driven screening and bundle timing (lactate, cultures, antibiotics, fluids) are shared with
-      physicians and the lab.
+      Nurses screen patients for sepsis and help time each step of the bundle (lactate test, blood cultures,
+      antibiotics, fluids) together with doctors and the lab.
 
 # CMS Provider Data Catalog footnote crosswalk (dataset y9us-9xdf), retrieved 2026-10-24.
+# Wording lightly edited to remove dashes; meaning unchanged.
 footnotes:
-  "1": The number of cases/patients is too few to report.
-  "2": Data submitted were based on a sample of cases/patients.
+  "1": The number of cases or patients is too few to report.
+  "2": Data submitted were based on a sample of cases or patients.
   "3": Results are based on a shorter time period than required.
   "4": Data suppressed by CMS for one or more quarters.
   "5": Results are not available for this reporting period.
   "6": Fewer than 100 patients completed the CAHPS survey. Use these scores with caution, as the number of surveys may be too low to reliably assess facility performance.
   "7": No cases met the criteria for this measure.
   "8": The lower limit of the confidence interval cannot be calculated if the number of observed infections equals zero.
-  "9": No data are available from the state/territory for this reporting period.
+  "9": No data are available from the state or territory for this reporting period.
   "10": Very few patients were eligible for the CAHPS survey. The scores shown reflect fewer than 50 completed surveys. Use these scores with caution, as the number of surveys may be too low to reliably assess facility performance.
   "11": There were discrepancies in the data collection process.
   "12": This measure does not apply to this hospital for this reporting period.
   "13": Results cannot be calculated for this reporting period.
   "14": The results for this state are combined with nearby states to protect confidentiality.
-  "15": The number of cases/patients is too few to report a star rating.
+  "15": The number of cases or patients is too few to report a star rating.
   "16": There are too few measures or measure groups reported to calculate a star rating or measure group score.
   "17": This hospital's star rating only includes data reported on inpatient services.
   "18": This result is not based on performance data; the hospital did not submit data and did not submit an HAI exemption form.
@@ -370,7 +372,7 @@ footnotes:
   "26": State and national averages include Department of Defense (DoD) hospital data.
   "27": Retired
   "28": The results are based on the hospital or facility's data submissions. CMS approved the hospital or facility's Extraordinary Circumstances Exception request suggesting that results may be impacted.
-  "29": This measure was calculated using partial performance period data due to a CMS-approved exception.
+  "29": This measure was calculated using partial performance period data due to an exception approved by CMS.
   "a": Maryland hospitals are waived from receiving payment adjustments under the Program.
   "*": For Maryland hospitals, no data are available to calculate a PSI 90 measure result; therefore, no performance decile or points are assigned for Domain 1 and the Total HAC score is dependent on the Domain 2 score.
   "**": This value was calculated using data reported by the hospital in compliance with the requirements outlined for this program and does not take into account information that became available at a later date.

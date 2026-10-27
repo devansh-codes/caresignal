@@ -26,9 +26,9 @@ export function HacHistogram({ histogram, cutoff }: { histogram: National['hac_h
   const data = counts.map((c, i) => [bins[i], bins[i + 1], c])
   const base = baseOption()
   const option = axes(base, {
-    type: 'value', min: lo, max: hi, name: 'Total HAC Score (higher = worse)', nameLocation: 'middle', nameGap: 28,
+    type: 'value', min: lo, max: hi, name: 'Safety score (higher means worse)', nameLocation: 'middle', nameGap: 28,
     splitLine: { show: false },
-  }, { type: 'value', name: 'Hospitals', nameTextStyle: { color: token('muted') } })
+  }, { type: 'value', name: 'Number of hospitals', nameTextStyle: { color: token('muted') } })
   option.tooltip = {
     ...(base.tooltip as object),
     trigger: 'item',
@@ -65,12 +65,12 @@ export function HacHistogram({ histogram, cutoff }: { histogram: National['hac_h
         silent: true,
         symbol: 'none',
         lineStyle: { color: critical, width: 2, type: 'solid' },
-        label: { formatter: `Cutoff ${fmt(cutoff, 4)}`, color: critical, fontWeight: 600, position: 'end', distance: 4 },
+        label: { formatter: `Penalty line ${fmt(cutoff, 2)}`, color: critical, fontWeight: 600, position: 'end', distance: 4 },
         data: [{ xAxis: cutoff }],
       },
     },
   ] as EChartsOption['series']
-  return <Chart option={option} height={320} ariaLabel={`Histogram of Total HAC Scores with the penalty cutoff at ${fmt(cutoff, 4)}`} />
+  return <Chart option={option} height={320} ariaLabel={`How many hospitals have each safety score, with the penalty line at ${fmt(cutoff, 2)}`} />
 }
 
 export function NursingShareChart({ share }: { share: National['nursing_share'] }) {
@@ -84,14 +84,14 @@ export function NursingShareChart({ share }: { share: National['nursing_share'] 
   option.grid = { left: 8, right: 56, top: 8, bottom: 24, containLabel: true }
   option.tooltip = { ...(base.tooltip as object), trigger: 'item', formatter: (p: unknown) => {
     const i = (p as { dataIndex: number }).dataIndex
-    return `${CATEGORY_LABEL[rows[i].category]}<br/><b>${fmt(rows[i].share * 100, 1)}%</b> of weighted points (${fmt(rows[i].points, 1)})`
+    return `${CATEGORY_LABEL[rows[i].category]}<br/><b>${fmt(rows[i].share * 100, 1)}%</b> of the points pushing scores up`
   } }
   option.series = [{
     type: 'bar', barWidth: 22,
     data: rows.map((r) => ({ value: r.share, itemStyle: { color: colors[r.category], borderRadius: [0, 4, 4, 0] } })),
     label: { show: true, position: 'right', color: token('ink'), formatter: (p: { value: number }) => `${fmt(p.value * 100, 1)}%` },
   }] as EChartsOption['series']
-  return <Chart option={option} height={150} ariaLabel="Share of weighted HAC points by nursing category" />
+  return <Chart option={option} height={150} ariaLabel="Share of penalty points by who owns the measure" />
 }
 
 export function TippingChart({ counts }: { counts: National['tipping_counts'] }) {
@@ -103,12 +103,12 @@ export function TippingChart({ counts }: { counts: National['tipping_counts'] })
   option.grid = { left: 8, right: 48, top: 8, bottom: 24, containLabel: true }
   option.tooltip = { ...(base.tooltip as object), trigger: 'axis', axisPointer: { type: 'shadow' } }
   option.series = [{
-    type: 'bar', name: 'Penalized hospitals', barWidth: 18,
+    type: 'bar', name: 'Hospitals above the line', barWidth: 18,
     itemStyle: { color: token('primary'), borderRadius: [0, 4, 4, 0] },
     label: { show: true, position: 'right', color: token('ink') },
     data: rows.map((r) => r.count),
   }] as EChartsOption['series']
-  return <Chart option={option} height={Math.max(160, rows.length * 34 + 40)} ariaLabel="Count of hospitals by tipping measure" />
+  return <Chart option={option} height={Math.max(160, rows.length * 34 + 40)} ariaLabel="Number of hospitals for which each infection type is the easiest fix" />
 }
 
 export function NurseCommScatter({ points, cutoff }: { points: National['scatter_nurse_comm_vs_hac']; cutoff: number }) {
@@ -117,24 +117,24 @@ export function NurseCommScatter({ points, cutoff }: { points: National['scatter
   const below = points.filter((p) => p.y <= cutoff).map((p) => [p.x, p.y, p.ccn])
   const base = baseOption()
   const option = axes(base,
-    { type: 'value', scale: true, name: 'Nurse communication top-box (%)', nameLocation: 'middle', nameGap: 28, splitLine: solidGrid() },
-    { type: 'value', scale: true, name: 'Total HAC Score', nameTextStyle: { color: token('muted') } })
+    { type: 'value', scale: true, name: 'Patients saying nurses always communicated well (%)', nameLocation: 'middle', nameGap: 28, splitLine: solidGrid() },
+    { type: 'value', scale: true, name: 'Safety score', nameTextStyle: { color: token('muted') } })
   option.legend = { top: 0, right: 0, textStyle: { color: token('muted') }, itemWidth: 10, itemHeight: 10 }
   option.grid = { left: 48, right: 16, top: 36, bottom: 40, containLabel: true }
   option.tooltip = { ...(base.tooltip as object), trigger: 'item', formatter: (p: unknown) => {
     const v = (p as { value: [number, number, string] }).value
-    return `CCN ${v[2]}<br/>Nurse comm top-box: <b>${fmt(v[0], 0)}%</b><br/>Total HAC Score: <b>${fmt(v[1], 4)}</b>`
+    return `Hospital ID ${v[2]}<br/>Nurse communication: <b>${fmt(v[0], 0)}%</b><br/>Safety score: <b>${fmt(v[1], 2)}</b>`
   } }
   const ring = { borderColor: token('surface'), borderWidth: 1 }
   option.series = [
-    { type: 'scatter', name: 'At or below cutoff', symbolSize: 6, data: below, itemStyle: { color: token('primary', 0.55), ...ring }, large: false },
+    { type: 'scatter', name: 'Below the line', symbolSize: 6, data: below, itemStyle: { color: token('primary', 0.55), ...ring }, large: false },
     {
-      type: 'scatter', name: 'Above cutoff', symbolSize: 6, data: above, itemStyle: { color: token('critical', 0.7), ...ring },
+      type: 'scatter', name: 'Above the line', symbolSize: 6, data: above, itemStyle: { color: token('critical', 0.7), ...ring },
       markLine: { silent: true, symbol: 'none', lineStyle: { color: token('critical'), width: 1.5, type: 'dashed' },
-        label: { formatter: 'Cutoff', color: token('critical'), position: 'insideEndTop' }, data: [{ yAxis: cutoff }] },
+        label: { formatter: 'Penalty line', color: token('critical'), position: 'insideEndTop' }, data: [{ yAxis: cutoff }] },
     },
   ] as EChartsOption['series']
-  return <Chart option={option} height={360} ariaLabel="Scatter plot of nurse communication top-box versus Total HAC Score" />
+  return <Chart option={option} height={360} ariaLabel="Each dot is a hospital: nurse communication score across, safety score up" />
 }
 
 export function PeerPenaltyChart({ rows }: { rows: National['by_peer'] }) {
@@ -146,12 +146,12 @@ export function PeerPenaltyChart({ rows }: { rows: National['by_peer'] }) {
   option.grid = { left: 8, right: 48, top: 8, bottom: 24, containLabel: true }
   option.tooltip = { ...(base.tooltip as object), trigger: 'item', formatter: (p: unknown) => {
     const r = top[(p as { dataIndex: number }).dataIndex]
-    return `${r.label}<br/><b>${fmt(r.pct, 1)}%</b> penalized (${r.penalized} of ${r.n})`
+    return `${r.label}<br/><b>${fmt(r.pct, 1)}%</b> above the line (${r.penalized} of ${r.n})`
   } }
   option.series = [{
     type: 'bar', barWidth: 14, itemStyle: { color: token('primary'), borderRadius: [0, 4, 4, 0] },
     label: { show: true, position: 'right', color: token('ink'), formatter: (p: { value: number }) => `${fmt(p.value, 0)}%` },
     data: top.map((r) => r.pct),
   }] as EChartsOption['series']
-  return <Chart option={option} height={Math.max(180, top.length * 28 + 40)} ariaLabel="Penalty rate by peer group, top groups" />
+  return <Chart option={option} height={Math.max(180, top.length * 28 + 40)} ariaLabel="Share of hospitals above the penalty line, by type of hospital" />
 }

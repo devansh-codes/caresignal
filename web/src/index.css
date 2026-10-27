@@ -3,62 +3,83 @@
 @tailwind utilities;
 
 /*
- * Design tokens (RGB triplets so Tailwind can apply alpha).
- * Color carries meaning: red is reserved for "above the penalty cutoff" / worse-than-national only.
- * Category hues (nursing / shared / other) are never red, amber or green.
+ * Design tokens (RGB triplets so Tailwind can apply alpha). Visual target: cityhealthdashboard.com.
+ * See docs/STYLE_GUIDE.md. Navy headings, royal blue labels, yellow buttons, light gray blue page.
+ * Red (critical) is reserved for "above the penalty line". Category hues are never red, amber or green.
  */
 :root {
-  --bg: 246 248 251;
+  --bg: 245 246 250;
+  --page: 245 246 250;
   --surface: 255 255 255;
-  --surface-2: 240 244 248;
-  --border: 222 228 236;
-  --ink: 15 27 45;
-  --muted: 84 99 118;
-  --primary: 11 110 138;
+  --surface-2: 238 241 246;
+  --border: 220 226 236;
+  --rule: 201 210 227;
+  --ink: 17 38 89;
+  --body: 88 88 90;
+  --muted: 91 97 107;
+  --primary: 47 79 158;
   --primary-ink: 255 255 255;
-  --critical: 190 30 45;
-  --warning: 168 98 0;
-  --ok: 30 122 70;
-  --cat-nursing: 11 110 138;
-  --cat-shared: 108 92 210;
-  --cat-other: 128 140 158;
+  --navy: 17 38 89;
+  --navy-ink: 255 255 255;
+  --royal: 47 79 158;
+  --yellow: 254 202 113;
+  --critical: 179 38 30;
+  --warning: 161 92 0;
+  --ok: 46 125 79;
+  --cat-nursing: 0 106 142;
+  --cat-shared: 111 84 184;
+  --cat-other: 112 122 140;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: 10 16 28;
-    --surface: 17 25 40;
-    --surface-2: 24 34 52;
-    --border: 40 52 72;
-    --ink: 230 237 245;
-    --muted: 150 164 184;
-    --primary: 64 182 212;
-    --primary-ink: 6 20 30;
-    --critical: 255 107 107;
+  :root[data-theme='dark-system'] {
+    --bg: 9 18 40;
+    --page: 9 18 40;
+    --surface: 16 30 62;
+    --surface-2: 24 41 80;
+    --border: 42 60 100;
+    --rule: 58 78 120;
+    --ink: 236 240 248;
+    --body: 200 207 220;
+    --muted: 168 178 198;
+    --primary: 150 178 245;
+    --primary-ink: 9 18 40;
+    --navy: 6 14 34;
+    --navy-ink: 255 255 255;
+    --royal: 38 64 132;
+    --yellow: 254 202 113;
+    --critical: 255 122 112;
     --warning: 240 170 70;
-    --ok: 86 200 130;
-    --cat-nursing: 64 182 212;
-    --cat-shared: 160 148 255;
+    --ok: 104 200 142;
+    --cat-nursing: 92 182 214;
+    --cat-shared: 170 150 255;
     --cat-other: 176 158 136;
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: 10 16 28;
-  --surface: 17 25 40;
-  --surface-2: 24 34 52;
-  --border: 40 52 72;
-  --ink: 230 237 245;
-  --muted: 150 164 184;
-  --primary: 64 182 212;
-  --primary-ink: 6 20 30;
-  --critical: 255 107 107;
+  --bg: 9 18 40;
+  --page: 9 18 40;
+  --surface: 16 30 62;
+  --surface-2: 24 41 80;
+  --border: 42 60 100;
+  --rule: 58 78 120;
+  --ink: 236 240 248;
+  --body: 200 207 220;
+  --muted: 168 178 198;
+  --primary: 150 178 245;
+  --primary-ink: 9 18 40;
+  --navy: 6 14 34;
+  --navy-ink: 255 255 255;
+  --royal: 38 64 132;
+  --yellow: 254 202 113;
+  --critical: 255 122 112;
   --warning: 240 170 70;
-  --ok: 86 200 130;
-  --cat-nursing: 64 182 212;
-  --cat-shared: 160 148 255;
+  --ok: 104 200 142;
+  --cat-nursing: 92 182 214;
+  --cat-shared: 170 150 255;
   --cat-other: 176 158 136;
   color-scheme: dark;
 }
@@ -66,8 +87,8 @@
 html,
 body {
   background: rgb(var(--bg));
-  color: rgb(var(--ink));
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: rgb(var(--body));
+  font-family: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
