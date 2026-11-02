@@ -55,7 +55,7 @@ There are no servers, API keys or runtime costs. Every number on the site traces
 ## Key national findings
 
 <!-- FINDINGS:START -->
-_Worked out by the pipeline from public CMS files (built 2026-10-27). Each finding names its source file and time period._
+_Worked out by the pipeline from public CMS files (built 2026-11-02). Each finding names its source file and time period._
 
 - **2,917** of 5,419 hospitals have a FY2026 safety score (Total HAC Score). The penalty line is a score above **0.37955** (`yq43-i98g`).
 - **About 1 in 4 hospitals lose 1% of their Medicare payments in FY2026** (719 (23.9%)). CMS made a penalty decision for 3,012 hospitals and penalized 719 of them. 718 of those have a published safety score (hospital 440218 is penalized without a published score). 2 penalized hospitals are missing from the CMS hospital list, so CareSignal shows 716 penalized hospitals. 43 Maryland hospitals get a score but are exempt from the penalty. The penalty line is a safety score above 0.37955.  
