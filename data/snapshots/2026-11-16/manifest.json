@@ -1,0 +1,224 @@
+{
+  "built_at": "2026-11-16T19:39:23Z",
+  "git_sha": "f4fc588",
+  "changed": [
+    "xubh-q36u",
+    "77hc-ibv8",
+    "dgck-syfz",
+    "ynj2-r877",
+    "muwa-iene",
+    "632h-zaca",
+    "yv7e-xc69",
+    "99ue-w85f",
+    "84jm-wiui"
+  ],
+  "sources": [
+    {
+      "id": "xubh-q36u",
+      "title": "Hospital General Information",
+      "role": "Facility list, type, ownership, state, overall star rating",
+      "modified": "2026-10-26",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/d3bf87c5505155f549d603688414f3c6_1793059553/Hospital_General_Information_2.csv",
+      "rows": 5435,
+      "period": null,
+      "http_status": 200,
+      "sha256": "ff2a82a7149975fb86348e7f901aa3bcd9f3701e8b0ecd0ab34702df193ff559",
+      "fetched_at": "2026-11-16T19:38:52Z"
+    },
+    {
+      "id": "77hc-ibv8",
+      "title": "Healthcare Associated Infections - Hospital",
+      "role": "SIR, observed, predicted, device days and CIs for HAI_1-HAI_6",
+      "modified": "2026-10-19",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/43825e12dc0c923df9ba5cbdf473c9d5_1792599610/Healthcare_Associated_Infections-Hospital.csv",
+      "rows": 172332,
+      "period": {
+        "start": "2025-01-01",
+        "end": "2025-12-31"
+      },
+      "http_status": 200,
+      "sha256": "586b831541f567106c438c7f72cb312786282a55fe8a98559e8d990fa8144001",
+      "fetched_at": "2026-11-16T19:38:53Z"
+    },
+    {
+      "id": "dgck-syfz",
+      "title": "Patient survey (HCAHPS) - Hospital",
+      "role": "Nurse communication, discharge information and HCAHPS star ratings",
+      "modified": "2026-10-19",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/78a50346fbe828ea0ce2837847af6a7c_1792599592/HCAHPS-Hospital.csv",
+      "rows": 512209,
+      "period": {
+        "start": "2025-01-01",
+        "end": "2025-12-31"
+      },
+      "http_status": 200,
+      "sha256": "c7cc9241c9726f15a00e9e6c44b7fd72ceb16f173a515776faa0fcb50dd71069",
+      "fetched_at": "2026-11-16T19:38:57Z"
+    },
+    {
+      "id": "ynj2-r877",
+      "title": "Complications and Deaths - Hospital",
+      "role": "PSI 03, PSI 08, PSI 90 and other PSIs (compared to national)",
+      "modified": "2026-10-20",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/6af7c44d77436e5a1caac3ce39a83fe9_1792599556/Complications_and_Deaths-Hospital.csv",
+      "rows": 95740,
+      "period": {
+        "start": "2022-07-01",
+        "end": "2025-06-30"
+      },
+      "http_status": 200,
+      "sha256": "3cacd2a3b81226b70c72274259a907526588ba558eec5e14fb411553babc735a",
+      "fetched_at": "2026-11-16T19:39:08Z"
+    },
+    {
+      "id": "muwa-iene",
+      "title": "CMS Medicare PSI-90 and component measures - six-digit estimate dataset",
+      "role": "Precise PSI 90 component values",
+      "modified": "2026-10-19",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/84bd78c1b4e386185bcef2af963d8cf9_1792599552/CMS_PSI_6_decimal_file.csv",
+      "rows": 52305,
+      "period": {
+        "start": "2023-07-01",
+        "end": "2025-06-30"
+      },
+      "http_status": 200,
+      "sha256": "238b483415f7d947d111ef8b6e82ad337863c3623908de589aef63da2eecd7d6",
+      "fetched_at": "2026-11-16T19:39:11Z"
+    },
+    {
+      "id": "yq43-i98g",
+      "title": "Hospital-Acquired Condition (HAC) Reduction Program",
+      "role": "FY2026 official HAC measure values, Winsorized z-scores, Total HAC Score, payment reduction (ground truth)",
+      "modified": "2026-01-26",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/74be67fd6833391f578abb5605d03ce6_1770163605/FY_2026_HAC_Reduction_Program_Hospital.csv",
+      "rows": 3055,
+      "period": {
+        "start": "2022-07-01",
+        "end": "2024-12-31"
+      },
+      "http_status": 200,
+      "sha256": "5e152d9872e6f3a012eafe312b1f9916c1cc0a830aed0752aa1aef1925a4e5c4",
+      "fetched_at": "2026-10-25T04:32:42Z"
+    },
+    {
+      "id": "9n3s-kdb3",
+      "title": "Hospital Readmissions Reduction Program",
+      "role": "Excess readmission ratios by condition",
+      "modified": "2026-01-26",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/a171bc36c488d3e0dc33ec63abb469a6_1770163617/FY_2026_Hospital_Readmissions_Reduction_Program_Hospital.csv",
+      "rows": 18330,
+      "period": {
+        "start": "2021-07-01",
+        "end": "2024-06-30"
+      },
+      "http_status": 200,
+      "sha256": "7e7915dd2751a1e59ac46dbc9194fb781e820962a04d47c31344ea2bb30c91f6",
+      "fetched_at": "2026-10-25T04:32:43Z"
+    },
+    {
+      "id": "ypbt-wvdk",
+      "title": "Hospital Value-Based Purchasing (HVBP) - Total Performance Score",
+      "role": "VBP domain scores and Total Performance Score",
+      "modified": "2026-01-26",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/5551d4839c1dd75e3f7fe1310a1e2369_1770163628/hvbp_tps.csv",
+      "rows": 2455,
+      "period": null,
+      "http_status": 200,
+      "sha256": "68263e795e5cd228b63e9632f50b1613e409f3ff20d85fd0c114aed4085ee103",
+      "fetched_at": "2026-10-25T04:32:43Z"
+    },
+    {
+      "id": "632h-zaca",
+      "title": "Unplanned Hospital Visits - Hospital",
+      "role": "Readmission and return-visit measures",
+      "modified": "2026-10-20",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/30edc1d0417a34b58affcc2495a02b0a_1792599927/Unplanned_Hospital_Visits-Hospital.csv",
+      "rows": 67018,
+      "period": {
+        "start": "2022-01-01",
+        "end": "2025-06-30"
+      },
+      "http_status": 200,
+      "sha256": "c89470bb1fa175dbe4765c4f61609cc02d14bf321006eb2408886a8173b029d7",
+      "fetched_at": "2026-11-16T19:39:15Z"
+    },
+    {
+      "id": "yv7e-xc69",
+      "title": "Timely and Effective Care - Hospital",
+      "role": "SEP-1 sepsis bundle and other process measures",
+      "modified": "2026-10-19",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/0437b5494ac61507ad90f2af6b8085a7_1792599910/Timely_and_Effective_Care-Hospital.csv",
+      "rows": 161313,
+      "period": {
+        "start": "2024-01-01",
+        "end": "2026-03-31"
+      },
+      "http_status": 200,
+      "sha256": "473241c09b40010baa4b734d0b8bed540d2c275491368da5d08be4f19a019b92",
+      "fetched_at": "2026-11-16T19:39:16Z"
+    },
+    {
+      "id": "99ue-w85f",
+      "title": "Patient survey (HCAHPS) - National",
+      "role": "National HCAHPS benchmarks",
+      "modified": "2026-10-19",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/08eefc5ab7c6cce7b3555fd79b0d8eec_1792599600/HCAHPS-National.csv",
+      "rows": 84,
+      "period": {
+        "start": "2025-01-01",
+        "end": "2025-12-31"
+      },
+      "http_status": 200,
+      "sha256": "53d699851fbabd2791c59ae17b4e725d42846cf44f8fb32f094d2194b43b1f73",
+      "fetched_at": "2026-11-16T19:39:21Z"
+    },
+    {
+      "id": "84jm-wiui",
+      "title": "Patient survey (HCAHPS) - State",
+      "role": "State HCAHPS benchmarks",
+      "modified": "2026-10-19",
+      "download_url": "https://data.cms.gov/provider-data/sites/default/files/resources/e4ca53701c73500a3188874f2bbd2854_1792599605/HCAHPS-State.csv",
+      "rows": 4704,
+      "period": {
+        "start": "2025-01-01",
+        "end": "2025-12-31"
+      },
+      "http_status": 200,
+      "sha256": "7e159a3109dff5a62bbd99ec7c1969c5d0c0c7358ed4167c4cdaac40ffded098",
+      "fetched_at": "2026-11-16T19:39:22Z"
+    },
+    {
+      "id": "cost_report",
+      "title": "Hospital Provider Cost Report",
+      "role": "Bed count, intern/resident FTEs (teaching), urban/rural for peer groups",
+      "modified": "2026-10-05",
+      "download_url": "https://data.cms.gov/sites/default/files/2026-10/46b1f5a0-a9dd-4431-beee-2ee7194b4135/CostReport_2024_Final.csv",
+      "rows": 6109,
+      "period": {
+        "start": "2023-10-01",
+        "end": "2025-10-31"
+      },
+      "http_status": 200,
+      "sha256": "bde32414133a7b4ae0bb092654f805ad9d20335764cb4f91feeb4ca129c4e782",
+      "fetched_at": "2026-10-25T04:32:48Z",
+      "year": 2024,
+      "year_candidate": 2024,
+      "selection_note": "2024 covers 100% of 2023 CCNs; using 2024"
+    },
+    {
+      "id": "medicare_inpatient",
+      "title": "Medicare Inpatient Hospitals - by Provider",
+      "role": "Total Medicare inpatient payments per hospital (1% HAC exposure estimate)",
+      "modified": "2026-04-23",
+      "download_url": "https://data.cms.gov/sites/default/files/2026-04/d9525c59-002b-45b3-af22-c81061a62dcd/mup_inp_ry26_p04_v10_dy24_prv.csv",
+      "rows": 3044,
+      "period": null,
+      "http_status": 200,
+      "sha256": "c8c556451429e3517efa4dd2c7cc9b707b2344af42ff96c284221ad1062dc705",
+      "fetched_at": "2026-10-25T04:32:48Z",
+      "year": 2024,
+      "year_candidate": 2024,
+      "selection_note": null
+    }
+  ]
+}
